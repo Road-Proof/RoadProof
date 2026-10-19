@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
@@ -11,7 +10,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /// @dev Los informes completos se almacenan fuera de la blockchain.
 ///      El contrato conserva sus hashes y los datos necesarios para
 ///      verificar su trazabilidad e integridad.
-contract RoadProofRegistry is Ownable{
+contract RoadProofRegistry is Ownable {
     // ---------------------------------------------------------------
     // TIPOS DE DATOS
     // ---------------------------------------------------------------
@@ -45,8 +44,7 @@ contract RoadProofRegistry is Ownable{
 
     /// @notice Indica qué directores técnicos están autorizados por taller.
     /// @dev tallerId => director técnico => autorizado.
-    mapping(bytes32 => mapping(address => bool))
-        public directorTecnicoPorTaller;
+    mapping(bytes32 => mapping(address => bool)) public directorTecnicoPorTaller;
 
     // ---------------------------------------------------------------
     // ERRORES PERSONALIZADOS
@@ -67,16 +65,12 @@ contract RoadProofRegistry is Ownable{
 
     /// @notice Se emite cuando se autoriza un director técnico.
     event DirectorTecnicoAutorizado(
-        bytes32 indexed tallerId,
-        address indexed directorTecnico,
-        address indexed administrador
+        bytes32 indexed tallerId, address indexed directorTecnico, address indexed administrador
     );
 
     /// @notice Se emite cuando se revoca una autorización.
     event DirectorTecnicoRevocado(
-        bytes32 indexed tallerId,
-        address indexed directorTecnico,
-        address indexed administrador
+        bytes32 indexed tallerId, address indexed directorTecnico, address indexed administrador
     );
 
     /// @notice Se emite al registrar una revisión técnica.
@@ -89,7 +83,6 @@ contract RoadProofRegistry is Ownable{
         bytes32 informeHash,
         uint256 timestamp
     );
-
 
     // ---------------------------------------------------------------
     // CONSTRUCTOR
@@ -108,10 +101,7 @@ contract RoadProofRegistry is Ownable{
     /// @notice Autoriza un director técnico para un taller.
     /// @param tallerId Identificador único del taller.
     /// @param directorTecnico Dirección del director técnico.
-    function autorizarDirectorTecnico(
-        bytes32 tallerId,
-        address directorTecnico
-    ) external onlyOwner {
+    function autorizarDirectorTecnico(bytes32 tallerId, address directorTecnico) external onlyOwner {
         if (tallerId == bytes32(0)) {
             revert IdentificadorInvalido();
         }
@@ -126,20 +116,13 @@ contract RoadProofRegistry is Ownable{
 
         directorTecnicoPorTaller[tallerId][directorTecnico] = true;
 
-        emit DirectorTecnicoAutorizado(
-            tallerId,
-            directorTecnico,
-            msg.sender
-        );
+        emit DirectorTecnicoAutorizado(tallerId, directorTecnico, msg.sender);
     }
 
     /// @notice Revoca la autorización de un director técnico para un taller.
     /// @param tallerId Identificador del taller.
     /// @param directorTecnico Dirección del director técnico.
-    function revocarDirectorTecnico(
-        bytes32 tallerId,
-        address directorTecnico
-    ) external onlyOwner {
+    function revocarDirectorTecnico(bytes32 tallerId, address directorTecnico) external onlyOwner {
         if (tallerId == bytes32(0)) {
             revert IdentificadorInvalido();
         }
@@ -154,11 +137,7 @@ contract RoadProofRegistry is Ownable{
 
         directorTecnicoPorTaller[tallerId][directorTecnico] = false;
 
-        emit DirectorTecnicoRevocado(
-            tallerId,
-            directorTecnico,
-            msg.sender
-        );
+        emit DirectorTecnicoRevocado(tallerId, directorTecnico, msg.sender);
     }
 
     // ---------------------------------------------------------------
@@ -185,10 +164,7 @@ contract RoadProofRegistry is Ownable{
             revert IdentificadorInvalido();
         }
 
-        if (
-            informeHash == bytes32(0) ||
-            vehiculoRefHash == bytes32(0)
-        ) {
+        if (informeHash == bytes32(0) || vehiculoRefHash == bytes32(0)) {
             revert HashInvalido();
         }
 
@@ -214,13 +190,7 @@ contract RoadProofRegistry is Ownable{
         });
 
         emit RevisionRegistrada(
-            revisionId,
-            tallerId,
-            vehiculoRefHash,
-            msg.sender,
-            resultado,
-            informeHash,
-            block.timestamp
+            revisionId, tallerId, vehiculoRefHash, msg.sender, resultado, informeHash, block.timestamp
         );
     }
 
@@ -234,10 +204,7 @@ contract RoadProofRegistry is Ownable{
     /// @param revisionId Identificador de la revisión.
     /// @param hashCalculado Hash calculado a partir del informe a verificar.
     /// @return integro True si el hash coincide con el registrado.
-    function verificarIntegridad(
-        bytes32 revisionId,
-        bytes32 hashCalculado
-    ) external view returns (bool integro) {
+    function verificarIntegridad(bytes32 revisionId, bytes32 hashCalculado) external view returns (bool integro) {
         if (!revisionExiste[revisionId]) {
             revert RevisionInexistente();
         }

@@ -1,5 +1,4 @@
-
- // SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
@@ -29,168 +28,77 @@ contract RoadProofRegistryTest is Test {
     }
 
     function testPropietarioPuedeAutorizarDirector() public {
-        registry.autorizarDirectorTecnico(
-            tallerId,
-            directorTecnico
-        );
+        registry.autorizarDirectorTecnico(tallerId, directorTecnico);
 
-        assertTrue(
-            registry.directorTecnicoPorTaller(
-                tallerId,
-                directorTecnico
-            )
-        );
+        assertTrue(registry.directorTecnicoPorTaller(tallerId, directorTecnico));
     }
 
-    function testUsuarioNoAutorizadoNoPuedeAutorizarDirector()
-        public
-    {
+    function testUsuarioNoAutorizadoNoPuedeAutorizarDirector() public {
         vm.prank(usuarioNoAutorizado);
         vm.expectRevert();
 
-        registry.autorizarDirectorTecnico(
-            tallerId,
-            directorTecnico
-        );
+        registry.autorizarDirectorTecnico(tallerId, directorTecnico);
     }
 
-    function testDirectorAutorizadoPuedeRegistrarRevision()
-        public
-    {
-        registry.autorizarDirectorTecnico(
-            tallerId,
-            directorTecnico
-        );
+    function testDirectorAutorizadoPuedeRegistrarRevision() public {
+        registry.autorizarDirectorTecnico(tallerId, directorTecnico);
 
         vm.prank(directorTecnico);
-        registry.registrarRevision(
-            revisionId,
-            informeHash,
-            vehiculoRefHash,
-            tallerId,
-            RoadProofRegistry.Resultado.APTO
-        );
+        registry.registrarRevision(revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
 
         assertTrue(registry.revisionExiste(revisionId));
 
-        assertTrue(
-            registry.verificarIntegridad(
-                revisionId,
-                informeHash
-            )
-        );
+        assertTrue(registry.verificarIntegridad(revisionId, informeHash));
     }
 
-    function testDirectorNoAutorizadoNoPuedeRegistrarRevision()
-        public
-    {
+    function testDirectorNoAutorizadoNoPuedeRegistrarRevision() public {
         vm.prank(usuarioNoAutorizado);
-        vm.expectRevert(
-            RoadProofRegistry.DirectorTecnicoNoAutorizado.selector
-        );
+        vm.expectRevert(RoadProofRegistry.DirectorTecnicoNoAutorizado.selector);
 
-        registry.registrarRevision(
-            revisionId,
-            informeHash,
-            vehiculoRefHash,
-            tallerId,
-            RoadProofRegistry.Resultado.APTO
-        );
+        registry.registrarRevision(revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
     }
 
     function testNoPermiteRegistrarRevisionDuplicada() public {
-        registry.autorizarDirectorTecnico(
-            tallerId,
-            directorTecnico
-        );
+        registry.autorizarDirectorTecnico(tallerId, directorTecnico);
 
         vm.startPrank(directorTecnico);
 
-        registry.registrarRevision(
-            revisionId,
-            informeHash,
-            vehiculoRefHash,
-            tallerId,
-            RoadProofRegistry.Resultado.APTO
-        );
+        registry.registrarRevision(revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
 
-        vm.expectRevert(
-            RoadProofRegistry.RevisionDuplicada.selector
-        );
+        vm.expectRevert(RoadProofRegistry.RevisionDuplicada.selector);
 
         registry.registrarRevision(
-            revisionId,
-            informeHash,
-            vehiculoRefHash,
-            tallerId,
-            RoadProofRegistry.Resultado.RECHAZADO
+            revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.RECHAZADO
         );
 
         vm.stopPrank();
     }
 
     function testDetectaHashDeInformeIncorrecto() public {
-        registry.autorizarDirectorTecnico(
-            tallerId,
-            directorTecnico
-        );
+        registry.autorizarDirectorTecnico(tallerId, directorTecnico);
 
         vm.prank(directorTecnico);
-        registry.registrarRevision(
-            revisionId,
-            informeHash,
-            vehiculoRefHash,
-            tallerId,
-            RoadProofRegistry.Resultado.APTO
-        );
+        registry.registrarRevision(revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
 
         bytes32 hashIncorrecto = keccak256("HASH_INCORRECTO");
 
-        assertFalse(
-            registry.verificarIntegridad(
-                revisionId,
-                hashIncorrecto
-            )
-        );
+        assertFalse(registry.verificarIntegridad(revisionId, hashIncorrecto));
     }
 
-    function testNoPermiteVerificarRevisionInexistente()
-        public
-    {
-        vm.expectRevert(
-            RoadProofRegistry.RevisionInexistente.selector
-        );
+    function testNoPermiteVerificarRevisionInexistente() public {
+        vm.expectRevert(RoadProofRegistry.RevisionInexistente.selector);
 
-        registry.verificarIntegridad(
-            keccak256("REVISION_INEXISTENTE"),
-            informeHash
-        );
+        registry.verificarIntegridad(keccak256("REVISION_INEXISTENTE"), informeHash);
     }
 
-    function testDirectorRevocadoNoPuedeRegistrarRevision()
-        public
-    {
-        registry.autorizarDirectorTecnico(
-            tallerId,
-            directorTecnico
-        );
+    function testDirectorRevocadoNoPuedeRegistrarRevision() public {
+        registry.autorizarDirectorTecnico(tallerId, directorTecnico);
 
-        registry.revocarDirectorTecnico(
-            tallerId,
-            directorTecnico
-        );
+        registry.revocarDirectorTecnico(tallerId, directorTecnico);
 
         vm.prank(directorTecnico);
-        vm.expectRevert(
-            RoadProofRegistry.DirectorTecnicoNoAutorizado.selector
-        );
+        vm.expectRevert(RoadProofRegistry.DirectorTecnicoNoAutorizado.selector);
 
-        registry.registrarRevision(
-            revisionId,
-            informeHash,
-            vehiculoRefHash,
-            tallerId,
-            RoadProofRegistry.Resultado.APTO
-        );
+        registry.registrarRevision(revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
     }
 }
