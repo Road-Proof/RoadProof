@@ -45,9 +45,7 @@ contract RoadProofRegistryTest is Test {
         );
     }
 
-    function testUsuarioNoAutorizadoNoPuedeAutorizarDirector()
-        public
-    {
+    function testUsuarioNoAutorizadoNoPuedeAutorizarDirector() public {
         vm.prank(usuarioNoAutorizado);
         vm.expectRevert();
 
@@ -176,13 +174,7 @@ contract RoadProofRegistryTest is Test {
         );
 
         vm.prank(directorTecnico);
-        registry.registrarRevision(
-            revisionId,
-            informeHash,
-            vehiculoRefHash,
-            tallerId,
-            RoadProofRegistry.Resultado.APTO
-        );
+        registry.registrarRevision(revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
 
         assertTrue(registry.revisionExiste(revisionId));
 
@@ -208,14 +200,15 @@ contract RoadProofRegistryTest is Test {
         );
     }
 
+
     function testNoPermiteRegistrarRevisionDuplicada() public {
         authorization.autorizarDirectorTecnico(
             tallerId,
             directorTecnico
         );
 
-        vm.startPrank(directorTecnico);
-
+        // Primera llamada: la revisión se registra correctamente.
+        vm.prank(directorTecnico);
         registry.registrarRevision(
             revisionId,
             informeHash,
@@ -224,6 +217,8 @@ contract RoadProofRegistryTest is Test {
             RoadProofRegistry.Resultado.APTO
         );
 
+        // Segunda llamada: debe fallar porque el identificador ya existe.
+        vm.prank(directorTecnico);
         vm.expectRevert(
             RoadProofRegistry.RevisionDuplicada.selector
         );
@@ -235,9 +230,8 @@ contract RoadProofRegistryTest is Test {
             tallerId,
             RoadProofRegistry.Resultado.RECHAZADO
         );
-
-        vm.stopPrank();
     }
+
 
     function testDirectorRevocadoNoPuedeRegistrarRevision()
         public
@@ -405,10 +399,7 @@ contract RoadProofRegistryTest is Test {
             RoadProofRegistry.RevisionInexistente.selector
         );
 
-        registry.verificarIntegridad(
-            keccak256("REVISION_INEXISTENTE"),
-            informeHash
-        );
+        registry.verificarIntegridad(keccak256("REVISION_INEXISTENTE"), informeHash);
     }
 
     function testNoPermiteVerificarConHashCero() public {

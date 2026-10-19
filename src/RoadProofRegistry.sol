@@ -132,10 +132,7 @@ contract RoadProofRegistry is Ownable {
             revert IdentificadorInvalido();
         }
 
-        if (
-            informeHash == bytes32(0) ||
-            vehiculoRefHash == bytes32(0)
-        ) {
+        if (informeHash == bytes32(0) || vehiculoRefHash == bytes32(0)) {
             revert HashInvalido();
         }
 
@@ -188,10 +185,7 @@ contract RoadProofRegistry is Ownable {
     /// @param revisionId Identificador de la revisión.
     /// @param hashCalculado Hash calculado del informe que se verifica.
     /// @return integro True si el hash coincide con el registrado.
-    function verificarIntegridad(
-        bytes32 revisionId,
-        bytes32 hashCalculado
-    ) external view returns (bool integro) {
+    function verificarIntegridad(bytes32 revisionId, bytes32 hashCalculado) external view returns (bool integro) {
         if (!revisionExiste[revisionId]) {
             revert RevisionInexistente();
         }
