@@ -15,8 +15,7 @@ contract RoadProofAuthorization is Ownable {
 
     /// @notice Indica qué directores técnicos están autorizados por taller.
     /// @dev tallerId => director técnico => autorizado.
-    mapping(bytes32 => mapping(address => bool))
-        public directorTecnicoPorTaller;
+    mapping(bytes32 => mapping(address => bool)) public directorTecnicoPorTaller;
 
     // ---------------------------------------------------------------
     // ERRORES PERSONALIZADOS
@@ -43,9 +42,7 @@ contract RoadProofAuthorization is Ownable {
     /// @param directorTecnico Dirección del director autorizado.
     /// @param administrador Dirección que ejecutó la autorización.
     event DirectorTecnicoAutorizado(
-        bytes32 indexed tallerId,
-        address indexed directorTecnico,
-        address indexed administrador
+        bytes32 indexed tallerId, address indexed directorTecnico, address indexed administrador
     );
 
     /// @notice Se emite al revocar un director técnico.
@@ -53,9 +50,7 @@ contract RoadProofAuthorization is Ownable {
     /// @param directorTecnico Dirección del director revocado.
     /// @param administrador Dirección que ejecutó la revocación.
     event DirectorTecnicoRevocado(
-        bytes32 indexed tallerId,
-        address indexed directorTecnico,
-        address indexed administrador
+        bytes32 indexed tallerId, address indexed directorTecnico, address indexed administrador
     );
 
     // ---------------------------------------------------------------
@@ -73,10 +68,7 @@ contract RoadProofAuthorization is Ownable {
     /// @notice Autoriza a un director técnico para un taller.
     /// @param tallerId Identificador único del taller.
     /// @param directorTecnico Dirección del director técnico.
-    function autorizarDirectorTecnico(
-        bytes32 tallerId,
-        address directorTecnico
-    ) external onlyOwner {
+    function autorizarDirectorTecnico(bytes32 tallerId, address directorTecnico) external onlyOwner {
         if (tallerId == bytes32(0)) {
             revert IdentificadorInvalido();
         }
@@ -91,20 +83,13 @@ contract RoadProofAuthorization is Ownable {
 
         directorTecnicoPorTaller[tallerId][directorTecnico] = true;
 
-        emit DirectorTecnicoAutorizado(
-            tallerId,
-            directorTecnico,
-            msg.sender
-        );
+        emit DirectorTecnicoAutorizado(tallerId, directorTecnico, msg.sender);
     }
 
     /// @notice Revoca la autorización de un director técnico para un taller.
     /// @param tallerId Identificador único del taller.
     /// @param directorTecnico Dirección del director técnico.
-    function revocarDirectorTecnico(
-        bytes32 tallerId,
-        address directorTecnico
-    ) external onlyOwner {
+    function revocarDirectorTecnico(bytes32 tallerId, address directorTecnico) external onlyOwner {
         if (tallerId == bytes32(0)) {
             revert IdentificadorInvalido();
         }
@@ -119,11 +104,7 @@ contract RoadProofAuthorization is Ownable {
 
         directorTecnicoPorTaller[tallerId][directorTecnico] = false;
 
-        emit DirectorTecnicoRevocado(
-            tallerId,
-            directorTecnico,
-            msg.sender
-        );
+        emit DirectorTecnicoRevocado(tallerId, directorTecnico, msg.sender);
     }
 
     // ---------------------------------------------------------------
@@ -134,10 +115,7 @@ contract RoadProofAuthorization is Ownable {
     /// @param tallerId Identificador único del taller.
     /// @param directorTecnico Dirección del director técnico.
     /// @return autorizado True si el director está autorizado.
-    function estaAutorizado(
-        bytes32 tallerId,
-        address directorTecnico
-    ) external view returns (bool autorizado) {
+    function estaAutorizado(bytes32 tallerId, address directorTecnico) external view returns (bool autorizado) {
         if (tallerId == bytes32(0)) {
             revert IdentificadorInvalido();
         }

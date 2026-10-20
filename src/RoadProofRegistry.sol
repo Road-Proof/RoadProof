@@ -96,16 +96,12 @@ contract RoadProofRegistry is Ownable {
     /// @notice Inicializa el registro y define el contrato de autorización.
     /// @param direccionAutorizacion Dirección de RoadProofAuthorization.
     /// @dev El desplegador se convierte en propietario inicial del registro.
-    constructor(
-        address direccionAutorizacion
-    ) Ownable(msg.sender) {
+    constructor(address direccionAutorizacion) Ownable(msg.sender) {
         if (direccionAutorizacion == address(0)) {
             revert ContratoAutorizacionInvalido();
         }
 
-        contratoAutorizacion = RoadProofAuthorization(
-            direccionAutorizacion
-        );
+        contratoAutorizacion = RoadProofAuthorization(direccionAutorizacion);
     }
 
     // ---------------------------------------------------------------
@@ -141,10 +137,7 @@ contract RoadProofRegistry is Ownable {
         }
 
         // Interacción entre contratos: consulta al contrato de autorización.
-        bool autorizado = contratoAutorizacion.estaAutorizado(
-            tallerId,
-            msg.sender
-        );
+        bool autorizado = contratoAutorizacion.estaAutorizado(tallerId, msg.sender);
 
         if (!autorizado) {
             revert DirectorTecnicoNoAutorizado();
@@ -165,13 +158,7 @@ contract RoadProofRegistry is Ownable {
         });
 
         emit RevisionRegistrada(
-            revisionId,
-            tallerId,
-            vehiculoRefHash,
-            msg.sender,
-            resultado,
-            informeHash,
-            timestampRegistro
+            revisionId, tallerId, vehiculoRefHash, msg.sender, resultado, informeHash, timestampRegistro
         );
     }
 
