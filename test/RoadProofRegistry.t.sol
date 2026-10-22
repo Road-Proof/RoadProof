@@ -122,6 +122,19 @@ contract RoadProofRegistryTest is Test {
         assertTrue(registry.verificarIntegridad(revisionId, informeHash));
     }
 
+    function testRegistraResultadoRechazado() public {
+        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+
+        vm.prank(directorTecnico);
+        registry.registrarRevision(
+            revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.RECHAZADO
+        );
+
+        (,,, RoadProofRegistry.Resultado resultadoGuardado,,) = registry.revisiones(revisionId);
+
+        assertEq(uint256(resultadoGuardado), uint256(RoadProofRegistry.Resultado.RECHAZADO));
+    }
+
     function testDirectorNoAutorizadoNoPuedeRegistrarRevision() public {
         vm.prank(usuarioNoAutorizado);
         vm.expectRevert(RoadProofRegistry.DirectorTecnicoNoAutorizado.selector);
@@ -288,5 +301,19 @@ contract RoadProofRegistryTest is Test {
         vm.expectRevert(RoadProofRegistry.ContratoAutorizacionInvalido.selector);
 
         new RoadProofRegistry(direccionSinContrato);
+    }
+
+    function testContratoIncompatibleEsRechazadoEnConstructor() public {
+        ContratoSinAutorizacion contratoIncompatible = new ContratoSinAutorizacion();
+
+        vm.expectRevert(RoadProofRegistry.ContratoAutorizacionInvalido.selector);
+
+        new RoadProofRegistry(address(contratoIncompatible));
+    }
+}
+
+contract ContratoSinAutorizacion {
+    function otraFuncion() external pure returns (bool) {
+        return true;
     }
 }
