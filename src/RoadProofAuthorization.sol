@@ -2,13 +2,14 @@
 pragma solidity ^0.8.24;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IRoadProofAuthorization} from "./IRoadProofAuthorization.sol";
 
 /// @title RoadProofAuthorization
 /// @author RoadProof
 /// @notice Administra las autorizaciones de directores técnicos por taller.
 /// @dev Solo el propietario puede autorizar o revocar directores técnicos.
 ///      Los permisos pueden consultarse desde otros contratos.
-contract RoadProofAuthorization is Ownable {
+contract RoadProofAuthorization is Ownable, IRoadProofAuthorization {
     // ---------------------------------------------------------------
     // ESTADO
     // ---------------------------------------------------------------
@@ -115,7 +116,12 @@ contract RoadProofAuthorization is Ownable {
     /// @param tallerId Identificador único del taller.
     /// @param directorTecnico Dirección del director técnico.
     /// @return autorizado True si el director está autorizado.
-    function estaAutorizado(bytes32 tallerId, address directorTecnico) external view returns (bool autorizado) {
+    function estaAutorizado(bytes32 tallerId, address directorTecnico)
+        external
+        view
+        override
+        returns (bool autorizado)
+    {
         if (tallerId == bytes32(0)) {
             revert IdentificadorInvalido();
         }

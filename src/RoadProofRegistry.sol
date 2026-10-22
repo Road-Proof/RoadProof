@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {RoadProofAuthorization} from "./RoadProofAuthorization.sol";
+import {IRoadProofAuthorization} from "./IRoadProofAuthorization.sol";
 
 /// @title RoadProofRegistry
 /// @author RoadProof
@@ -40,7 +39,7 @@ contract RoadProofRegistry {
     // ---------------------------------------------------------------
 
     /// @notice Contrato externo que administra las autorizaciones.
-    RoadProofAuthorization public immutable contratoAutorizacion;
+    IRoadProofAuthorization public immutable contratoAutorizacion;
 
     /// @notice Información de cada revisión, identificada por su ID.
     mapping(bytes32 => Revision) public revisiones;
@@ -99,13 +98,26 @@ contract RoadProofRegistry {
 
     /// @notice Inicializa el registro y define el contrato de autorización.
     /// @param direccionAutorizacion Dirección de RoadProofAuthorization.
-    /// @dev El desplegador se convierte en propietario inicial del registro.
+    /// @dev La dirección de autorización debe corresponder a un contrato desplegado.
 
     constructor(address direccionAutorizacion) {
         if (direccionAutorizacion == address(0) || direccionAutorizacion.code.length == 0) {
             revert ContratoAutorizacionInvalido();
         }
-        contratoAutorizacion = RoadProofAuthorization(direccionAutorizacion);
+
+        IRoadProofAuthorization autorizacion = IRoadProofAuthorization(direccionAutorizacion);
+
+        // Comprueba que el contrato responda correctamente a la interfaz.
+        try autorizacion.estaAutorizado(bytes32(uint256(1)), address(this)) returns (
+            bool
+        ) {
+        // La llamada respondió con un booleano válido.
+        }
+        catch {
+            revert ContratoAutorizacionInvalido();
+        }
+
+        contratoAutorizacion = autorizacion;
     }
 
     // ---------------------------------------------------------------
