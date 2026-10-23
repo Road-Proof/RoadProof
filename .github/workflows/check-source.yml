@@ -9,18 +9,18 @@ jobs:
     if: github.repository == 'Road-Proof/RoadProof'
     runs-on: ubuntu-latest
     steps:
-      - name: Validar origen del PR
+      - name: Validate PR source
         env:
           BASE_REF: ${{ github.base_ref }}
           HEAD_REF: ${{ github.head_ref }}
           IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
         run: |
           if [ "$BASE_REF" = "main" ] && [ "$HEAD_REF" != "dev" ]; then
-            echo "Solo se permiten PRs desde dev hacia main"
+            echo "Only PRs from dev to main are allowed"
             exit 1
           fi
           if [ "$BASE_REF" = "dev" ] && [ "$IS_FORK" != "true" ]; then
-            echo "Solo se permiten PRs desde forks hacia dev"
+            echo "Only PRs from forks to dev are allowed"
             exit 1
           fi
 
