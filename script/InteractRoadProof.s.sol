@@ -34,7 +34,7 @@ contract InteractRoadProof is Script {
         require(registry.inspectionExists(inspectionId), "The inspection does not exist");
         require(registry.verifyIntegrity(inspectionId, reportHash), "The report hash does not match");
 
-        (bytes32 storedReportHash, bytes32 storedVehicleRefHash,,,,) = registry.inspections(inspectionId);
+        (bytes32 storedReportHash, bytes32 storedVehicleRefHash,,,) = registry.inspections(inspectionId);
 
         require(storedReportHash == reportHash, "Incorrect report");
         require(storedVehicleRefHash == vehicleRefHash, "Incorrect vehicle");

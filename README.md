@@ -104,7 +104,8 @@ Cada revisión registrada contiene:
 - Identificador del taller.
 - Resultado de la revisión.
 - Dirección de Ethereum que registró la revisión como director técnico.
-- Fecha y hora del registro.
+
+La fecha y hora del registro se incluye únicamente en el evento `InspectionRegistered`, no en el estado almacenado de la revisión.
 
 Los hashes no permiten recuperar por sí solos el contenido original. Para verificar la integridad, debe calcularse nuevamente el hash de los datos originales y compararlo con el registrado.
 

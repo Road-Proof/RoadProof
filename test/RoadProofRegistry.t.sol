@@ -132,7 +132,7 @@ contract RoadProofRegistryTest is Test {
             inspectionId, reportHash, vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.REJECTED
         );
 
-        (,,, RoadProofRegistry.InspectionResult storedResult,,) = registry.inspections(inspectionId);
+        (,,, RoadProofRegistry.InspectionResult storedResult,) = registry.inspections(inspectionId);
 
         assertEq(uint256(storedResult), uint256(RoadProofRegistry.InspectionResult.REJECTED));
     }
@@ -223,6 +223,7 @@ contract RoadProofRegistryTest is Test {
 
     function testEmitsEventWhenRegisteringInspection() public {
         authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+        vm.warp(1_700_000_000);
 
         vm.expectEmit(true, true, true, true, address(registry));
 
@@ -297,8 +298,7 @@ contract RoadProofRegistryTest is Test {
             bytes32 storedVehicleRefHash,
             bytes32 storedWorkshopId,
             RoadProofRegistry.InspectionResult storedResult,
-            address storedDirector,
-            uint256 storedTimestamp
+            address storedDirector
         ) = registry.inspections(inspectionId);
 
         assertEq(storedReportHash, reportHash);
@@ -306,7 +306,6 @@ contract RoadProofRegistryTest is Test {
         assertEq(storedWorkshopId, workshopId);
         assertEq(uint256(storedResult), uint256(RoadProofRegistry.InspectionResult.CONDITIONAL));
         assertEq(storedDirector, technicalDirector);
-        assertGt(storedTimestamp, 0);
     }
 
     function testCannotCreateRegistryWithZeroAuthorizationAddress() public {
