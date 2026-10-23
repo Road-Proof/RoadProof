@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {RoadProofRegistry} from "../src/RoadProofRegistry.sol";
 import {RoadProofAuthorization} from "../src/RoadProofAuthorization.sol";
 
@@ -28,6 +29,81 @@ contract RoadProofRegistryTest is Test {
         inspectionId = keccak256("INSPECTION_001");
         reportHash = keccak256("REPORT_HASH_001");
         vehicleRefHash = keccak256("VEHICLE_001");
+    }
+
+    // ---------------------------------------------------------------
+    // OWNERSHIP
+    // ---------------------------------------------------------------
+
+    function testPendingOwnerCannotManageDirectors() public {
+        address newOwner = makeAddr("newOwner");
+
+        authorization.transferOwnership(newOwner);
+
+        assertEq(authorization.owner(), address(this));
+        assertEq(authorization.pendingOwner(), newOwner);
+
+        vm.prank(newOwner);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, newOwner));
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+        assertTrue(authorization.isAuthorized(workshopId, technicalDirector));
+
+        vm.prank(newOwner);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, newOwner));
+        authorization.revokeTechnicalDirector(workshopId, technicalDirector);
+
+        authorization.revokeTechnicalDirector(workshopId, technicalDirector);
+        assertFalse(authorization.isAuthorized(workshopId, technicalDirector));
+    }
+
+    function testAcceptedOwnerCanManageDirectors() public {
+        address newOwner = makeAddr("newOwner");
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+        authorization.transferOwnership(newOwner);
+
+        vm.prank(newOwner);
+        authorization.acceptOwnership();
+
+        assertEq(authorization.owner(), newOwner);
+        assertEq(authorization.pendingOwner(), address(0));
+        assertTrue(authorization.isAuthorized(workshopId, technicalDirector));
+
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this)));
+        authorization.revokeTechnicalDirector(workshopId, technicalDirector);
+
+        vm.prank(newOwner);
+        authorization.revokeTechnicalDirector(workshopId, technicalDirector);
+        assertFalse(authorization.isAuthorized(workshopId, technicalDirector));
+
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this)));
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+
+        vm.prank(newOwner);
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+        assertTrue(authorization.isAuthorized(workshopId, technicalDirector));
+    }
+
+    function testOnlyOwnerCanStartOwnershipTransfer() public {
+        vm.prank(unauthorizedUser);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, unauthorizedUser));
+        authorization.transferOwnership(unauthorizedUser);
+
+        assertEq(authorization.owner(), address(this));
+        assertEq(authorization.pendingOwner(), address(0));
+    }
+
+    function testOnlyPendingOwnerCanAcceptOwnership() public {
+        address newOwner = makeAddr("newOwner");
+        authorization.transferOwnership(newOwner);
+
+        vm.prank(unauthorizedUser);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, unauthorizedUser));
+        authorization.acceptOwnership();
+
+        assertEq(authorization.owner(), address(this));
+        assertEq(authorization.pendingOwner(), newOwner);
     }
 
     // ---------------------------------------------------------------
