@@ -2,14 +2,16 @@
 pragma solidity ^0.8.24;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {IRoadProofAuthorization} from "./IRoadProofAuthorization.sol";
 
 /// @title RoadProofAuthorization
 /// @author RoadProof
 /// @notice Manages technical director authorizations for each workshop.
 /// @dev Only the owner can authorize or revoke technical directors.
+///      Ownership transfers require acceptance by the pending owner.
 ///      Other contracts can query these permissions.
-contract RoadProofAuthorization is Ownable, IRoadProofAuthorization {
+contract RoadProofAuthorization is Ownable2Step, IRoadProofAuthorization {
     // ---------------------------------------------------------------
     // STATE
     // ---------------------------------------------------------------

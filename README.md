@@ -240,7 +240,7 @@ Revoca la autorización previamente otorgada.
 
 Consulta si una dirección está autorizada para un taller.
 
-El contrato utiliza control de propiedad mediante OpenZeppelin `Ownable`. Las operaciones administrativas requieren que la transacción sea ejecutada por el propietario del contrato.
+El contrato utiliza control de propiedad mediante OpenZeppelin `Ownable2Step`. Las operaciones administrativas requieren que la transacción sea ejecutada por el propietario del contrato. Para transferir la propiedad, el propietario actual llama a `transferOwnership(newOwner)` y el nuevo propietario debe confirmar con `acceptOwnership()`. Hasta esa confirmación, el propietario actual conserva sus permisos.
 
 La relación se almacena mediante el mapeo `directorTecnicoPorTaller`.
 
@@ -847,7 +847,7 @@ La integración de extremo a extremo todavía debe completarse y documentarse co
 
 Durante el desarrollo se aplican o se contemplan las siguientes medidas:
 
-- Control de acceso administrativo mediante OpenZeppelin `Ownable`.
+- Control de acceso administrativo mediante OpenZeppelin `Ownable2Step`, con aceptación explícita del nuevo propietario al transferir la propiedad.
 - Autorización del director técnico específica por taller.
 - Rechazo de revisiones duplicadas.
 - Validación de identificadores y hashes.
