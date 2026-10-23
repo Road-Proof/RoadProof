@@ -24,6 +24,7 @@ contract RoadProofRegistry {
     }
 
     /// @notice Recorded information for a vehicle inspection.
+    /// @dev The registration timestamp is available in the InspectionRegistered event.
 
     struct Inspection {
         bytes32 reportHash;
@@ -31,7 +32,6 @@ contract RoadProofRegistry {
         bytes32 workshopId;
         InspectionResult result;
         address technicalDirector;
-        uint256 timestamp;
     }
 
     // ---------------------------------------------------------------
@@ -161,8 +161,6 @@ contract RoadProofRegistry {
         }
 
         // Effects: store the inspection after validating the conditions.
-        uint256 registrationTimestamp = block.timestamp;
-
         inspectionExists[inspectionId] = true;
 
         inspections[inspectionId] = Inspection({
@@ -170,12 +168,11 @@ contract RoadProofRegistry {
             vehicleRefHash: vehicleRefHash,
             workshopId: workshopId,
             result: result,
-            technicalDirector: msg.sender,
-            timestamp: registrationTimestamp
+            technicalDirector: msg.sender
         });
 
         emit InspectionRegistered(
-            inspectionId, workshopId, vehicleRefHash, msg.sender, result, reportHash, registrationTimestamp
+            inspectionId, workshopId, vehicleRefHash, msg.sender, result, reportHash, block.timestamp
         );
     }
 
