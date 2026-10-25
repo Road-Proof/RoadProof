@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {RoadProofRegistry} from "../src/RoadProofRegistry.sol";
 import {RoadProofAuthorization} from "../src/RoadProofAuthorization.sol";
 
@@ -9,284 +10,405 @@ contract RoadProofRegistryTest is Test {
     RoadProofAuthorization internal authorization;
     RoadProofRegistry internal registry;
 
-    address internal directorTecnico;
-    address internal usuarioNoAutorizado;
+    address internal technicalDirector;
+    address internal unauthorizedUser;
 
-    bytes32 internal tallerId;
-    bytes32 internal revisionId;
-    bytes32 internal informeHash;
-    bytes32 internal vehiculoRefHash;
+    bytes32 internal workshopId;
+    bytes32 internal inspectionId;
+    bytes32 internal reportHash;
+    bytes32 internal vehicleRefHash;
 
     function setUp() public {
         authorization = new RoadProofAuthorization();
         registry = new RoadProofRegistry(address(authorization));
 
-        directorTecnico = makeAddr("directorTecnico");
-        usuarioNoAutorizado = makeAddr("usuarioNoAutorizado");
+        technicalDirector = makeAddr("technicalDirector");
+        unauthorizedUser = makeAddr("unauthorizedUser");
 
-        tallerId = keccak256("TALLER_001");
-        revisionId = keccak256("REVISION_001");
-        informeHash = keccak256("HASH_INFORME_001");
-        vehiculoRefHash = keccak256("VEHICULO_001");
+        workshopId = keccak256("WORKSHOP_001");
+        inspectionId = keccak256("INSPECTION_001");
+        reportHash = keccak256("REPORT_HASH_001");
+        vehicleRefHash = keccak256("VEHICLE_001");
     }
 
     // ---------------------------------------------------------------
-    // AUTORIZACIONES
+    // OWNERSHIP
     // ---------------------------------------------------------------
 
-    function testPropietarioPuedeAutorizarDirector() public {
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+    function testPendingOwnerCannotManageDirectors() public {
+        address newOwner = makeAddr("newOwner");
 
-        assertTrue(authorization.estaAutorizado(tallerId, directorTecnico));
+        authorization.transferOwnership(newOwner);
+
+        assertEq(authorization.owner(), address(this));
+        assertEq(authorization.pendingOwner(), newOwner);
+
+        vm.prank(newOwner);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, newOwner));
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+        assertTrue(authorization.isAuthorized(workshopId, technicalDirector));
+
+        vm.prank(newOwner);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, newOwner));
+        authorization.revokeTechnicalDirector(workshopId, technicalDirector);
+
+        authorization.revokeTechnicalDirector(workshopId, technicalDirector);
+        assertFalse(authorization.isAuthorized(workshopId, technicalDirector));
     }
 
-    function testUsuarioNoAutorizadoNoPuedeAutorizarDirector() public {
-        vm.prank(usuarioNoAutorizado);
+    function testAcceptedOwnerCanManageDirectors() public {
+        address newOwner = makeAddr("newOwner");
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+        authorization.transferOwnership(newOwner);
+
+        vm.prank(newOwner);
+        authorization.acceptOwnership();
+
+        assertEq(authorization.owner(), newOwner);
+        assertEq(authorization.pendingOwner(), address(0));
+        assertTrue(authorization.isAuthorized(workshopId, technicalDirector));
+
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this)));
+        authorization.revokeTechnicalDirector(workshopId, technicalDirector);
+
+        vm.prank(newOwner);
+        authorization.revokeTechnicalDirector(workshopId, technicalDirector);
+        assertFalse(authorization.isAuthorized(workshopId, technicalDirector));
+
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this)));
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+
+        vm.prank(newOwner);
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+        assertTrue(authorization.isAuthorized(workshopId, technicalDirector));
+    }
+
+    function testOnlyOwnerCanStartOwnershipTransfer() public {
+        vm.prank(unauthorizedUser);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, unauthorizedUser));
+        authorization.transferOwnership(unauthorizedUser);
+
+        assertEq(authorization.owner(), address(this));
+        assertEq(authorization.pendingOwner(), address(0));
+    }
+
+    function testOnlyPendingOwnerCanAcceptOwnership() public {
+        address newOwner = makeAddr("newOwner");
+        authorization.transferOwnership(newOwner);
+
+        vm.prank(unauthorizedUser);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, unauthorizedUser));
+        authorization.acceptOwnership();
+
+        assertEq(authorization.owner(), address(this));
+        assertEq(authorization.pendingOwner(), newOwner);
+    }
+
+    // ---------------------------------------------------------------
+    // AUTHORIZATIONS
+    // ---------------------------------------------------------------
+
+    function testOwnerCanAuthorizeDirector() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+
+        assertTrue(authorization.isAuthorized(workshopId, technicalDirector));
+    }
+
+    function testUnauthorizedUserCannotAuthorizeDirector() public {
+        vm.prank(unauthorizedUser);
         vm.expectRevert();
 
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
     }
 
-    function testNoPermiteAutorizarConTallerInvalido() public {
-        vm.expectRevert(RoadProofAuthorization.IdentificadorInvalido.selector);
+    function testCannotAuthorizeWithInvalidWorkshop() public {
+        vm.expectRevert(RoadProofAuthorization.InvalidIdentifier.selector);
 
-        authorization.autorizarDirectorTecnico(bytes32(0), directorTecnico);
+        authorization.authorizeTechnicalDirector(bytes32(0), technicalDirector);
     }
 
-    function testNoPermiteAutorizarDireccionCero() public {
-        vm.expectRevert(RoadProofAuthorization.DireccionInvalida.selector);
+    function testCannotAuthorizeZeroAddress() public {
+        vm.expectRevert(RoadProofAuthorization.InvalidAddress.selector);
 
-        authorization.autorizarDirectorTecnico(tallerId, address(0));
+        authorization.authorizeTechnicalDirector(workshopId, address(0));
     }
 
-    function testNoPermiteAutorizarDirectorDuplicado() public {
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+    function testCannotAuthorizeDirectorTwice() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
 
-        vm.expectRevert(RoadProofAuthorization.DirectorYaAutorizado.selector);
+        vm.expectRevert(RoadProofAuthorization.DirectorAlreadyAuthorized.selector);
 
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
     }
 
-    function testNoPermiteRevocarDirectorNoAutorizado() public {
-        vm.expectRevert(RoadProofAuthorization.DirectorNoAutorizado.selector);
+    function testCannotRevokeUnauthorizedDirector() public {
+        vm.expectRevert(RoadProofAuthorization.DirectorNotAuthorized.selector);
 
-        authorization.revocarDirectorTecnico(tallerId, directorTecnico);
+        authorization.revokeTechnicalDirector(workshopId, technicalDirector);
     }
 
-    function testEmiteEventoAlAutorizarDirector() public {
+    function testEmitsEventWhenAuthorizingDirector() public {
         vm.expectEmit(true, true, true, true, address(authorization));
 
-        emit RoadProofAuthorization.DirectorTecnicoAutorizado(tallerId, directorTecnico, address(this));
+        emit RoadProofAuthorization.TechnicalDirectorAuthorized(workshopId, technicalDirector, address(this));
 
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
     }
 
-    function testEmiteEventoAlRevocarDirector() public {
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+    function testEmitsEventWhenRevokingDirector() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
 
         vm.expectEmit(true, true, true, true, address(authorization));
 
-        emit RoadProofAuthorization.DirectorTecnicoRevocado(tallerId, directorTecnico, address(this));
+        emit RoadProofAuthorization.TechnicalDirectorRevoked(workshopId, technicalDirector, address(this));
 
-        authorization.revocarDirectorTecnico(tallerId, directorTecnico);
+        authorization.revokeTechnicalDirector(workshopId, technicalDirector);
     }
 
-    function testConsultarDirectorNoAutorizadoDevuelveFalse() public view {
-        assertFalse(authorization.estaAutorizado(tallerId, directorTecnico));
+    function testUnauthorizedDirectorQueryReturnsFalse() public view {
+        assertFalse(authorization.isAuthorized(workshopId, technicalDirector));
     }
 
-    function testConsultarConTallerInvalidoRevierte() public {
-        vm.expectRevert(RoadProofAuthorization.IdentificadorInvalido.selector);
+    function testQueryWithInvalidWorkshopReverts() public {
+        vm.expectRevert(RoadProofAuthorization.InvalidIdentifier.selector);
 
-        authorization.estaAutorizado(bytes32(0), directorTecnico);
+        authorization.isAuthorized(bytes32(0), technicalDirector);
     }
 
-    function testConsultarConDireccionCeroRevierte() public {
-        vm.expectRevert(RoadProofAuthorization.DireccionInvalida.selector);
+    function testQueryWithZeroAddressReverts() public {
+        vm.expectRevert(RoadProofAuthorization.InvalidAddress.selector);
 
-        authorization.estaAutorizado(tallerId, address(0));
+        authorization.isAuthorized(workshopId, address(0));
     }
 
     // ---------------------------------------------------------------
-    // REGISTRO DE REVISIONES
+    // INSPECTION REGISTRATION
     // ---------------------------------------------------------------
 
-    function testDirectorAutorizadoPuedeRegistrarRevision() public {
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+    function testAuthorizedDirectorCanRegisterInspection() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
 
-        vm.prank(directorTecnico);
-        registry.registrarRevision(revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
+        vm.prank(technicalDirector);
+        registry.registerInspection(
+            inspectionId, reportHash, vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.PASS
+        );
 
-        assertTrue(registry.revisionExiste(revisionId));
+        assertTrue(registry.inspectionExists(inspectionId));
 
-        assertTrue(registry.verificarIntegridad(revisionId, informeHash));
+        assertTrue(registry.verifyIntegrity(inspectionId, reportHash));
     }
 
-    function testDirectorNoAutorizadoNoPuedeRegistrarRevision() public {
-        vm.prank(usuarioNoAutorizado);
-        vm.expectRevert(RoadProofRegistry.DirectorTecnicoNoAutorizado.selector);
+    function testRegistersRejectedResult() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
 
-        registry.registrarRevision(revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
+        vm.prank(technicalDirector);
+        registry.registerInspection(
+            inspectionId, reportHash, vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.REJECTED
+        );
+
+        (,,, RoadProofRegistry.InspectionResult storedResult,) = registry.inspections(inspectionId);
+
+        assertEq(uint256(storedResult), uint256(RoadProofRegistry.InspectionResult.REJECTED));
     }
 
-    function testNoPermiteRegistrarRevisionDuplicada() public {
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+    function testUnauthorizedDirectorCannotRegisterInspection() public {
+        vm.prank(unauthorizedUser);
+        vm.expectRevert(RoadProofRegistry.TechnicalDirectorNotAuthorized.selector);
 
-        // Primera llamada: la revisión se registra correctamente.
-        vm.prank(directorTecnico);
-        registry.registrarRevision(revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
-
-        // Segunda llamada: debe fallar porque el identificador ya existe.
-        vm.prank(directorTecnico);
-        vm.expectRevert(RoadProofRegistry.RevisionDuplicada.selector);
-
-        registry.registrarRevision(
-            revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.RECHAZADO
+        registry.registerInspection(
+            inspectionId, reportHash, vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.PASS
         );
     }
 
-    function testDirectorRevocadoNoPuedeRegistrarRevision() public {
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+    function testCannotRegisterDuplicateInspection() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
 
-        authorization.revocarDirectorTecnico(tallerId, directorTecnico);
+        // First call: the inspection is registered successfully.
+        vm.prank(technicalDirector);
+        registry.registerInspection(
+            inspectionId, reportHash, vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.PASS
+        );
 
-        vm.prank(directorTecnico);
-        vm.expectRevert(RoadProofRegistry.DirectorTecnicoNoAutorizado.selector);
+        // Second call: must fail because the identifier already exists.
+        vm.prank(technicalDirector);
+        vm.expectRevert(RoadProofRegistry.DuplicateInspection.selector);
 
-        registry.registrarRevision(revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
-    }
-
-    function testNoPermiteRegistrarConRevisionInvalida() public {
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
-
-        vm.prank(directorTecnico);
-        vm.expectRevert(RoadProofRegistry.IdentificadorInvalido.selector);
-
-        registry.registrarRevision(bytes32(0), informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
-    }
-
-    function testNoPermiteRegistrarConTallerInvalido() public {
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
-
-        vm.prank(directorTecnico);
-        vm.expectRevert(RoadProofRegistry.IdentificadorInvalido.selector);
-
-        registry.registrarRevision(
-            revisionId, informeHash, vehiculoRefHash, bytes32(0), RoadProofRegistry.Resultado.APTO
+        registry.registerInspection(
+            inspectionId, reportHash, vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.REJECTED
         );
     }
 
-    function testNoPermiteRegistrarConHashDeInformeCero() public {
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+    function testRevokedDirectorCannotRegisterInspection() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
 
-        vm.prank(directorTecnico);
-        vm.expectRevert(RoadProofRegistry.HashInvalido.selector);
+        authorization.revokeTechnicalDirector(workshopId, technicalDirector);
 
-        registry.registrarRevision(revisionId, bytes32(0), vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
+        vm.prank(technicalDirector);
+        vm.expectRevert(RoadProofRegistry.TechnicalDirectorNotAuthorized.selector);
+
+        registry.registerInspection(
+            inspectionId, reportHash, vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.PASS
+        );
     }
 
-    function testNoPermiteRegistrarConHashDeVehiculoCero() public {
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+    function testCannotRegisterWithInvalidInspectionId() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
 
-        vm.prank(directorTecnico);
-        vm.expectRevert(RoadProofRegistry.HashInvalido.selector);
+        vm.prank(technicalDirector);
+        vm.expectRevert(RoadProofRegistry.InvalidIdentifier.selector);
 
-        registry.registrarRevision(revisionId, informeHash, bytes32(0), tallerId, RoadProofRegistry.Resultado.APTO);
+        registry.registerInspection(
+            bytes32(0), reportHash, vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.PASS
+        );
     }
 
-    function testEmiteEventoAlRegistrarRevision() public {
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+    function testCannotRegisterWithInvalidWorkshop() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+
+        vm.prank(technicalDirector);
+        vm.expectRevert(RoadProofRegistry.InvalidIdentifier.selector);
+
+        registry.registerInspection(
+            inspectionId, reportHash, vehicleRefHash, bytes32(0), RoadProofRegistry.InspectionResult.PASS
+        );
+    }
+
+    function testCannotRegisterWithZeroReportHash() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+
+        vm.prank(technicalDirector);
+        vm.expectRevert(RoadProofRegistry.InvalidHash.selector);
+
+        registry.registerInspection(
+            inspectionId, bytes32(0), vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.PASS
+        );
+    }
+
+    function testCannotRegisterWithZeroVehicleHash() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+
+        vm.prank(technicalDirector);
+        vm.expectRevert(RoadProofRegistry.InvalidHash.selector);
+
+        registry.registerInspection(
+            inspectionId, reportHash, bytes32(0), workshopId, RoadProofRegistry.InspectionResult.PASS
+        );
+    }
+
+    function testEmitsEventWhenRegisteringInspection() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+        vm.warp(1_700_000_000);
 
         vm.expectEmit(true, true, true, true, address(registry));
 
-        emit RoadProofRegistry.RevisionRegistrada(
-            revisionId,
-            tallerId,
-            vehiculoRefHash,
-            directorTecnico,
-            RoadProofRegistry.Resultado.APTO,
-            informeHash,
+        emit RoadProofRegistry.InspectionRegistered(
+            inspectionId,
+            workshopId,
+            vehicleRefHash,
+            technicalDirector,
+            RoadProofRegistry.InspectionResult.PASS,
+            reportHash,
             block.timestamp
         );
 
-        vm.prank(directorTecnico);
-        registry.registrarRevision(revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
+        vm.prank(technicalDirector);
+        registry.registerInspection(
+            inspectionId, reportHash, vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.PASS
+        );
     }
 
     // ---------------------------------------------------------------
-    // INTEGRIDAD DEL INFORME
+    // REPORT INTEGRITY
     // ---------------------------------------------------------------
 
-    function testDetectaHashDeInformeIncorrecto() public {
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+    function testDetectsIncorrectReportHash() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
 
-        vm.prank(directorTecnico);
-        registry.registrarRevision(revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
+        vm.prank(technicalDirector);
+        registry.registerInspection(
+            inspectionId, reportHash, vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.PASS
+        );
 
-        bytes32 hashIncorrecto = keccak256("HASH_INCORRECTO");
+        bytes32 incorrectHash = keccak256("INCORRECT_HASH");
 
-        assertFalse(registry.verificarIntegridad(revisionId, hashIncorrecto));
+        assertFalse(registry.verifyIntegrity(inspectionId, incorrectHash));
     }
 
-    function testNoPermiteVerificarRevisionInexistente() public {
-        vm.expectRevert(RoadProofRegistry.RevisionInexistente.selector);
+    function testCannotVerifyNonexistentInspection() public {
+        vm.expectRevert(RoadProofRegistry.InspectionNotFound.selector);
 
-        registry.verificarIntegridad(keccak256("REVISION_INEXISTENTE"), informeHash);
+        registry.verifyIntegrity(keccak256("NONEXISTENT_INSPECTION"), reportHash);
     }
 
-    function testNoPermiteVerificarConHashCero() public {
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+    function testCannotVerifyWithZeroHash() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
 
-        vm.prank(directorTecnico);
-        registry.registrarRevision(revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.APTO);
+        vm.prank(technicalDirector);
+        registry.registerInspection(
+            inspectionId, reportHash, vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.PASS
+        );
 
-        vm.expectRevert(RoadProofRegistry.HashInvalido.selector);
+        vm.expectRevert(RoadProofRegistry.InvalidHash.selector);
 
-        registry.verificarIntegridad(revisionId, bytes32(0));
+        registry.verifyIntegrity(inspectionId, bytes32(0));
     }
 
     // ---------------------------------------------------------------
-    // INTEGRACION ENTRE CONTRATOS
+    // CONTRACT INTEGRATION
     // ---------------------------------------------------------------
 
-    function testRegistryConsultaAutorizacionExterna() public {
-        authorization.autorizarDirectorTecnico(tallerId, directorTecnico);
+    function testRegistryQueriesExternalAuthorization() public {
+        authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
 
-        assertEq(address(registry.contratoAutorizacion()), address(authorization));
+        assertEq(address(registry.authorizationContract()), address(authorization));
 
-        vm.prank(directorTecnico);
-        registry.registrarRevision(
-            revisionId, informeHash, vehiculoRefHash, tallerId, RoadProofRegistry.Resultado.CONDICIONAL
+        vm.prank(technicalDirector);
+        registry.registerInspection(
+            inspectionId, reportHash, vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.CONDITIONAL
         );
 
         (
-            bytes32 informeHashGuardado,
-            bytes32 vehiculoRefHashGuardado,
-            bytes32 tallerIdGuardado,
-            RoadProofRegistry.Resultado resultadoGuardado,
-            address directorGuardado,
-            uint256 timestampGuardado
-        ) = registry.revisiones(revisionId);
+            bytes32 storedReportHash,
+            bytes32 storedVehicleRefHash,
+            bytes32 storedWorkshopId,
+            RoadProofRegistry.InspectionResult storedResult,
+            address storedDirector
+        ) = registry.inspections(inspectionId);
 
-        assertEq(informeHashGuardado, informeHash);
-        assertEq(vehiculoRefHashGuardado, vehiculoRefHash);
-        assertEq(tallerIdGuardado, tallerId);
-        assertEq(uint256(resultadoGuardado), uint256(RoadProofRegistry.Resultado.CONDICIONAL));
-        assertEq(directorGuardado, directorTecnico);
-        assertGt(timestampGuardado, 0);
+        assertEq(storedReportHash, reportHash);
+        assertEq(storedVehicleRefHash, vehicleRefHash);
+        assertEq(storedWorkshopId, workshopId);
+        assertEq(uint256(storedResult), uint256(RoadProofRegistry.InspectionResult.CONDITIONAL));
+        assertEq(storedDirector, technicalDirector);
     }
 
-    function testNoPermiteCrearRegistryConAutorizacionCero() public {
-        vm.expectRevert(RoadProofRegistry.ContratoAutorizacionInvalido.selector);
+    function testCannotCreateRegistryWithZeroAuthorizationAddress() public {
+        vm.expectRevert(RoadProofRegistry.InvalidAuthorizationContract.selector);
 
         new RoadProofRegistry(address(0));
     }
 
-    function testNoPermiteCrearRegistryConDireccionSinCodigo() public {
-        address direccionSinContrato = makeAddr("direccionSinContrato");
+    function testCannotCreateRegistryWithAddressWithoutCode() public {
+        address addressWithoutContract = makeAddr("addressWithoutContract");
 
-        vm.expectRevert(RoadProofRegistry.ContratoAutorizacionInvalido.selector);
+        vm.expectRevert(RoadProofRegistry.InvalidAuthorizationContract.selector);
 
-        new RoadProofRegistry(direccionSinContrato);
+        new RoadProofRegistry(addressWithoutContract);
+    }
+
+    function testConstructorRejectsIncompatibleContract() public {
+        ContractWithoutAuthorization incompatibleContract = new ContractWithoutAuthorization();
+
+        vm.expectRevert(RoadProofRegistry.InvalidAuthorizationContract.selector);
+
+        new RoadProofRegistry(address(incompatibleContract));
+    }
+}
+
+contract ContractWithoutAuthorization {
+    function otherFunction() external pure returns (bool) {
+        return true;
     }
 }

@@ -1,95 +1,94 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {RoadProofAuthorization} from "./RoadProofAuthorization.sol";
+import {IRoadProofAuthorization} from "./IRoadProofAuthorization.sol";
 
 /// @title RoadProofRegistry
 /// @author RoadProof
-/// @notice Registra revisiones técnicas vehiculares y verifica la integridad
-///         de sus informes mediante hashes.
-/// @dev Los informes completos se almacenan fuera de la blockchain.
-///      Las autorizaciones se consultan en RoadProofAuthorization.
+/// @notice Registers vehicle inspections and verifies the integrity
+///         of their reports using hashes.
+/// @dev Full reports are stored off-chain.
+///      Authorizations are queried through RoadProofAuthorization.
 
 contract RoadProofRegistry {
     // ---------------------------------------------------------------
-    // TIPOS DE DATOS
+    // DATA TYPES
     // ---------------------------------------------------------------
 
-    /// @notice Resultados posibles de una revisión técnica.
+    /// @notice Possible vehicle inspection results.
 
-    enum Resultado {
-        APTO,
-        CONDICIONAL,
-        RECHAZADO
+    enum InspectionResult {
+        PASS,
+        CONDITIONAL,
+        REJECTED
     }
 
-    /// @notice Información registrada de una revisión técnica.
+    /// @notice Recorded information for a vehicle inspection.
+    /// @dev The registration timestamp is available in the InspectionRegistered event.
 
-    struct Revision {
-        bytes32 informeHash;
-        bytes32 vehiculoRefHash;
-        bytes32 tallerId;
-        Resultado resultado;
-        address directorTecnico;
-        uint256 timestamp;
+    struct Inspection {
+        bytes32 reportHash;
+        bytes32 vehicleRefHash;
+        bytes32 workshopId;
+        InspectionResult result;
+        address technicalDirector;
     }
 
     // ---------------------------------------------------------------
-    // ESTADO
+    // STATE
     // ---------------------------------------------------------------
 
-    /// @notice Contrato externo que administra las autorizaciones.
-    RoadProofAuthorization public immutable contratoAutorizacion;
+    /// @notice External contract that manages authorizations.
+    IRoadProofAuthorization public immutable authorizationContract;
 
-    /// @notice Información de cada revisión, identificada por su ID.
-    mapping(bytes32 => Revision) public revisiones;
+    /// @notice Information for each inspection, identified by its ID.
+    mapping(bytes32 => Inspection) public inspections;
 
-    /// @notice Indica si una revisión ya fue registrada.
-    mapping(bytes32 => bool) public revisionExiste;
-
-    // ---------------------------------------------------------------
-    // ERRORES PERSONALIZADOS
-    // ---------------------------------------------------------------
-
-    /// @notice El identificador de revisión o taller no es válido.
-    error IdentificadorInvalido();
-
-    /// @notice Uno de los hashes requeridos es cero.
-    error HashInvalido();
-
-    /// @notice El director técnico no está autorizado para el taller.
-    error DirectorTecnicoNoAutorizado();
-
-    /// @notice La revisión ya fue registrada.
-    error RevisionDuplicada();
-
-    /// @notice La revisión solicitada no existe.
-    error RevisionInexistente();
-
-    /// @notice La dirección del contrato de autorización es inválida.
-    error ContratoAutorizacionInvalido();
+    /// @notice Indicates whether an inspection has already been registered.
+    mapping(bytes32 => bool) public inspectionExists;
 
     // ---------------------------------------------------------------
-    // EVENTOS
+    // CUSTOM ERRORS
     // ---------------------------------------------------------------
 
-    /// @notice Se emite al registrar una revisión técnica.
-    /// @param revisionId Identificador único de la revisión.
-    /// @param tallerId Identificador del taller.
-    /// @param vehiculoRefHash Hash de la referencia del vehículo.
-    /// @param directorTecnico Dirección del director técnico que registró.
-    /// @param resultado Resultado de la revisión.
-    /// @param informeHash Hash del informe registrado.
-    /// @param timestamp Momento del registro en blockchain.
+    /// @notice The inspection or workshop identifier is invalid.
+    error InvalidIdentifier();
 
-    event RevisionRegistrada(
-        bytes32 indexed revisionId,
-        bytes32 indexed tallerId,
-        bytes32 vehiculoRefHash,
-        address indexed directorTecnico,
-        Resultado resultado,
-        bytes32 informeHash,
+    /// @notice One of the required hashes is zero.
+    error InvalidHash();
+
+    /// @notice The technical director is not authorized for the workshop.
+    error TechnicalDirectorNotAuthorized();
+
+    /// @notice The inspection has already been registered.
+    error DuplicateInspection();
+
+    /// @notice The requested inspection does not exist.
+    error InspectionNotFound();
+
+    /// @notice The authorization contract address is invalid.
+    error InvalidAuthorizationContract();
+
+    // ---------------------------------------------------------------
+    // EVENTS
+    // ---------------------------------------------------------------
+
+    /// @notice Emitted when a vehicle inspection is registered.
+    /// @param inspectionId Unique inspection identifier.
+    /// @param workshopId Workshop identifier.
+    /// @param vehicleRefHash Hash of the vehicle reference.
+    /// @param technicalDirector Address of the technical director who registered the inspection.
+    /// @param result Inspection result.
+    /// @param reportHash Hash of the registered report.
+    /// @param timestamp Timestamp of registration on the blockchain.
+
+    event InspectionRegistered(
+        bytes32 indexed inspectionId,
+        bytes32 indexed workshopId,
+        bytes32 vehicleRefHash,
+        address indexed technicalDirector,
+        InspectionResult result,
+        bytes32 reportHash,
         uint256 timestamp
     );
 
@@ -97,96 +96,106 @@ contract RoadProofRegistry {
     // CONSTRUCTOR
     // ---------------------------------------------------------------
 
-    /// @notice Inicializa el registro y define el contrato de autorización.
-    /// @param direccionAutorizacion Dirección de RoadProofAuthorization.
-    /// @dev El desplegador se convierte en propietario inicial del registro.
+    /// @notice Initializes the registry and sets the authorization contract.
+    /// @param authorizationAddress Address of RoadProofAuthorization.
+    /// @dev The authorization address must belong to a deployed contract.
 
-    constructor(address direccionAutorizacion) {
-        if (direccionAutorizacion == address(0) || direccionAutorizacion.code.length == 0) {
-            revert ContratoAutorizacionInvalido();
+    constructor(address authorizationAddress) {
+        if (authorizationAddress == address(0) || authorizationAddress.code.length == 0) {
+            revert InvalidAuthorizationContract();
         }
-        contratoAutorizacion = RoadProofAuthorization(direccionAutorizacion);
+
+        IRoadProofAuthorization authorization = IRoadProofAuthorization(authorizationAddress);
+
+        // Checks that the contract responds correctly to the interface.
+        try authorization.isAuthorized(bytes32(uint256(1)), address(this)) returns (
+            bool
+        ) {
+        // The call returned a valid boolean.
+        }
+        catch {
+            revert InvalidAuthorizationContract();
+        }
+
+        authorizationContract = authorization;
     }
 
     // ---------------------------------------------------------------
-    // REGISTRO DE REVISIONES
+    // INSPECTION REGISTRATION
     // ---------------------------------------------------------------
 
-    /// @notice Registra una revisión técnica vehicular.
-    /// @dev Consulta RoadProofAuthorization para comprobar que el emisor
-    ///      está autorizado para el taller indicado.
-    ///      Los registros no pueden modificarse ni eliminarse.
-    /// @param revisionId Identificador único de la revisión.
-    /// @param informeHash Hash del informe de revisión.
-    /// @param vehiculoRefHash Hash de una referencia del vehículo.
-    /// @param tallerId Identificador del taller.
-    /// @param resultado Resultado de la revisión técnica.
+    /// @notice Registers a vehicle inspection.
+    /// @dev Queries RoadProofAuthorization to verify that the caller
+    ///      is authorized for the specified workshop.
+    ///      Records cannot be modified or deleted.
+    /// @param inspectionId Unique inspection identifier.
+    /// @param reportHash Hash of the inspection report.
+    /// @param vehicleRefHash Hash of a vehicle reference.
+    /// @param workshopId Workshop identifier.
+    /// @param result Vehicle inspection result.
 
-    function registrarRevision(
-        bytes32 revisionId,
-        bytes32 informeHash,
-        bytes32 vehiculoRefHash,
-        bytes32 tallerId,
-        Resultado resultado
+    function registerInspection(
+        bytes32 inspectionId,
+        bytes32 reportHash,
+        bytes32 vehicleRefHash,
+        bytes32 workshopId,
+        InspectionResult result
     ) external {
-        if (revisionId == bytes32(0) || tallerId == bytes32(0)) {
-            revert IdentificadorInvalido();
+        if (inspectionId == bytes32(0) || workshopId == bytes32(0)) {
+            revert InvalidIdentifier();
         }
 
-        if (informeHash == bytes32(0) || vehiculoRefHash == bytes32(0)) {
-            revert HashInvalido();
+        if (reportHash == bytes32(0) || vehicleRefHash == bytes32(0)) {
+            revert InvalidHash();
         }
 
-        if (revisionExiste[revisionId]) {
-            revert RevisionDuplicada();
+        if (inspectionExists[inspectionId]) {
+            revert DuplicateInspection();
         }
 
-        // Interacción entre contratos: consulta al contrato de autorización.
-        bool autorizado = contratoAutorizacion.estaAutorizado(tallerId, msg.sender);
+        // Contract interaction: query the authorization contract.
+        bool authorized = authorizationContract.isAuthorized(workshopId, msg.sender);
 
-        if (!autorizado) {
-            revert DirectorTecnicoNoAutorizado();
+        if (!authorized) {
+            revert TechnicalDirectorNotAuthorized();
         }
 
-        // Efectos: guardar la revisión después de validar las condiciones.
-        uint256 timestampRegistro = block.timestamp;
+        // Effects: store the inspection after validating the conditions.
+        inspectionExists[inspectionId] = true;
 
-        revisionExiste[revisionId] = true;
-
-        revisiones[revisionId] = Revision({
-            informeHash: informeHash,
-            vehiculoRefHash: vehiculoRefHash,
-            tallerId: tallerId,
-            resultado: resultado,
-            directorTecnico: msg.sender,
-            timestamp: timestampRegistro
+        inspections[inspectionId] = Inspection({
+            reportHash: reportHash,
+            vehicleRefHash: vehicleRefHash,
+            workshopId: workshopId,
+            result: result,
+            technicalDirector: msg.sender
         });
 
-        emit RevisionRegistrada(
-            revisionId, tallerId, vehiculoRefHash, msg.sender, resultado, informeHash, timestampRegistro
+        emit InspectionRegistered(
+            inspectionId, workshopId, vehicleRefHash, msg.sender, result, reportHash, block.timestamp
         );
     }
 
     // ---------------------------------------------------------------
-    // VERIFICACIÓN DE INTEGRIDAD
+    // INTEGRITY VERIFICATION
     // ---------------------------------------------------------------
 
-    /// @notice Comprueba si un hash coincide con el informe registrado.
-    /// @dev La coincidencia no demuestra que el informe sea verdadero;
-    ///      demuestra que coincide con el hash guardado en blockchain.
-    /// @param revisionId Identificador de la revisión.
-    /// @param hashCalculado Hash calculado del informe que se verifica.
-    /// @return integro True si el hash coincide con el registrado.
+    /// @notice Checks whether a hash matches the registered report.
+    /// @dev A match does not prove that the report is truthful;
+    ///      it proves that its hash matches the hash stored on-chain.
+    /// @param inspectionId Inspection identifier.
+    /// @param computedHash Computed hash of the report being verified.
+    /// @return intact True if the hash matches the registered hash.
 
-    function verificarIntegridad(bytes32 revisionId, bytes32 hashCalculado) external view returns (bool integro) {
-        if (!revisionExiste[revisionId]) {
-            revert RevisionInexistente();
+    function verifyIntegrity(bytes32 inspectionId, bytes32 computedHash) external view returns (bool intact) {
+        if (!inspectionExists[inspectionId]) {
+            revert InspectionNotFound();
         }
 
-        if (hashCalculado == bytes32(0)) {
-            revert HashInvalido();
+        if (computedHash == bytes32(0)) {
+            revert InvalidHash();
         }
 
-        return revisiones[revisionId].informeHash == hashCalculado;
+        return inspections[inspectionId].reportHash == computedHash;
     }
 }

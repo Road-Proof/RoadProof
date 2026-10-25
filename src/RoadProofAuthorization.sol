@@ -2,128 +2,136 @@
 pragma solidity ^0.8.24;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {IRoadProofAuthorization} from "./IRoadProofAuthorization.sol";
 
 /// @title RoadProofAuthorization
 /// @author RoadProof
-/// @notice Administra las autorizaciones de directores técnicos por taller.
-/// @dev Solo el propietario puede autorizar o revocar directores técnicos.
-///      Los permisos pueden consultarse desde otros contratos.
-contract RoadProofAuthorization is Ownable {
+/// @notice Manages technical director authorizations for each workshop.
+/// @dev Only the owner can authorize or revoke technical directors.
+///      Ownership transfers require acceptance by the pending owner.
+///      Other contracts can query these permissions.
+contract RoadProofAuthorization is Ownable2Step, IRoadProofAuthorization {
     // ---------------------------------------------------------------
-    // ESTADO
-    // ---------------------------------------------------------------
-
-    /// @notice Indica qué directores técnicos están autorizados por taller.
-    /// @dev tallerId => director técnico => autorizado.
-    mapping(bytes32 => mapping(address => bool)) public directorTecnicoPorTaller;
-
-    // ---------------------------------------------------------------
-    // ERRORES PERSONALIZADOS
+    // STATE
     // ---------------------------------------------------------------
 
-    /// @notice El identificador del taller no puede ser cero.
-    error IdentificadorInvalido();
-
-    /// @notice La dirección del director técnico no puede ser cero.
-    error DireccionInvalida();
-
-    /// @notice El director técnico ya está autorizado para el taller.
-    error DirectorYaAutorizado();
-
-    /// @notice El director técnico no está autorizado para el taller.
-    error DirectorNoAutorizado();
+    /// @notice Indicates which technical directors are authorized for each workshop.
+    /// @dev workshopId => technical director => authorized.
+    mapping(bytes32 => mapping(address => bool)) public authorizedDirectorsByWorkshop;
 
     // ---------------------------------------------------------------
-    // EVENTOS
+    // CUSTOM ERRORS
     // ---------------------------------------------------------------
 
-    /// @notice Se emite al autorizar un director técnico.
-    /// @param tallerId Identificador del taller.
-    /// @param directorTecnico Dirección del director autorizado.
-    /// @param administrador Dirección que ejecutó la autorización.
-    event DirectorTecnicoAutorizado(
-        bytes32 indexed tallerId, address indexed directorTecnico, address indexed administrador
+    /// @notice The workshop identifier cannot be zero.
+    error InvalidIdentifier();
+
+    /// @notice The technical director address cannot be zero.
+    error InvalidAddress();
+
+    /// @notice The technical director is already authorized for the workshop.
+    error DirectorAlreadyAuthorized();
+
+    /// @notice The technical director is not authorized for the workshop.
+    error DirectorNotAuthorized();
+
+    // ---------------------------------------------------------------
+    // EVENTS
+    // ---------------------------------------------------------------
+
+    /// @notice Emitted when a technical director is authorized.
+    /// @param workshopId Workshop identifier.
+    /// @param technicalDirector Address of the authorized director.
+    /// @param administrator Address that authorized the director.
+    event TechnicalDirectorAuthorized(
+        bytes32 indexed workshopId, address indexed technicalDirector, address indexed administrator
     );
 
-    /// @notice Se emite al revocar un director técnico.
-    /// @param tallerId Identificador del taller.
-    /// @param directorTecnico Dirección del director revocado.
-    /// @param administrador Dirección que ejecutó la revocación.
-    event DirectorTecnicoRevocado(
-        bytes32 indexed tallerId, address indexed directorTecnico, address indexed administrador
+    /// @notice Emitted when a technical director's authorization is revoked.
+    /// @param workshopId Workshop identifier.
+    /// @param technicalDirector Address of the director whose authorization was revoked.
+    /// @param administrator Address that revoked the authorization.
+    event TechnicalDirectorRevoked(
+        bytes32 indexed workshopId, address indexed technicalDirector, address indexed administrator
     );
 
     // ---------------------------------------------------------------
     // CONSTRUCTOR
     // ---------------------------------------------------------------
 
-    /// @notice Inicializa el contrato.
-    /// @dev El desplegador se convierte en propietario inicial.
+    /// @notice Initializes the contract.
+    /// @dev The deployer becomes the initial owner.
     constructor() Ownable(msg.sender) {}
 
     // ---------------------------------------------------------------
-    // ADMINISTRACIÓN DE AUTORIZACIONES
+    // AUTHORIZATION MANAGEMENT
     // ---------------------------------------------------------------
 
-    /// @notice Autoriza a un director técnico para un taller.
-    /// @param tallerId Identificador único del taller.
-    /// @param directorTecnico Dirección del director técnico.
-    function autorizarDirectorTecnico(bytes32 tallerId, address directorTecnico) external onlyOwner {
-        if (tallerId == bytes32(0)) {
-            revert IdentificadorInvalido();
+    /// @notice Authorizes a technical director for a workshop.
+    /// @param workshopId Unique workshop identifier.
+    /// @param technicalDirector Technical director address.
+    function authorizeTechnicalDirector(bytes32 workshopId, address technicalDirector) external onlyOwner {
+        if (workshopId == bytes32(0)) {
+            revert InvalidIdentifier();
         }
 
-        if (directorTecnico == address(0)) {
-            revert DireccionInvalida();
+        if (technicalDirector == address(0)) {
+            revert InvalidAddress();
         }
 
-        if (directorTecnicoPorTaller[tallerId][directorTecnico]) {
-            revert DirectorYaAutorizado();
+        if (authorizedDirectorsByWorkshop[workshopId][technicalDirector]) {
+            revert DirectorAlreadyAuthorized();
         }
 
-        directorTecnicoPorTaller[tallerId][directorTecnico] = true;
+        authorizedDirectorsByWorkshop[workshopId][technicalDirector] = true;
 
-        emit DirectorTecnicoAutorizado(tallerId, directorTecnico, msg.sender);
+        emit TechnicalDirectorAuthorized(workshopId, technicalDirector, msg.sender);
     }
 
-    /// @notice Revoca la autorización de un director técnico para un taller.
-    /// @param tallerId Identificador único del taller.
-    /// @param directorTecnico Dirección del director técnico.
-    function revocarDirectorTecnico(bytes32 tallerId, address directorTecnico) external onlyOwner {
-        if (tallerId == bytes32(0)) {
-            revert IdentificadorInvalido();
+    /// @notice Revokes a technical director's authorization for a workshop.
+    /// @param workshopId Unique workshop identifier.
+    /// @param technicalDirector Technical director address.
+    function revokeTechnicalDirector(bytes32 workshopId, address technicalDirector) external onlyOwner {
+        if (workshopId == bytes32(0)) {
+            revert InvalidIdentifier();
         }
 
-        if (directorTecnico == address(0)) {
-            revert DireccionInvalida();
+        if (technicalDirector == address(0)) {
+            revert InvalidAddress();
         }
 
-        if (!directorTecnicoPorTaller[tallerId][directorTecnico]) {
-            revert DirectorNoAutorizado();
+        if (!authorizedDirectorsByWorkshop[workshopId][technicalDirector]) {
+            revert DirectorNotAuthorized();
         }
 
-        directorTecnicoPorTaller[tallerId][directorTecnico] = false;
+        authorizedDirectorsByWorkshop[workshopId][technicalDirector] = false;
 
-        emit DirectorTecnicoRevocado(tallerId, directorTecnico, msg.sender);
+        emit TechnicalDirectorRevoked(workshopId, technicalDirector, msg.sender);
     }
 
     // ---------------------------------------------------------------
-    // CONSULTA DE AUTORIZACIONES
+    // AUTHORIZATION QUERIES
     // ---------------------------------------------------------------
 
-    /// @notice Consulta si un director técnico está autorizado para un taller.
-    /// @param tallerId Identificador único del taller.
-    /// @param directorTecnico Dirección del director técnico.
-    /// @return autorizado True si el director está autorizado.
-    function estaAutorizado(bytes32 tallerId, address directorTecnico) external view returns (bool autorizado) {
-        if (tallerId == bytes32(0)) {
-            revert IdentificadorInvalido();
+    /// @notice Checks whether a technical director is authorized for a workshop.
+    /// @param workshopId Unique workshop identifier.
+    /// @param technicalDirector Technical director address.
+    /// @return authorized True if the director is authorized.
+    function isAuthorized(bytes32 workshopId, address technicalDirector)
+        external
+        view
+        override
+        returns (bool authorized)
+    {
+        if (workshopId == bytes32(0)) {
+            revert InvalidIdentifier();
         }
 
-        if (directorTecnico == address(0)) {
-            revert DireccionInvalida();
+        if (technicalDirector == address(0)) {
+            revert InvalidAddress();
         }
 
-        return directorTecnicoPorTaller[tallerId][directorTecnico];
+        return authorizedDirectorsByWorkshop[workshopId][technicalDirector];
     }
 }
