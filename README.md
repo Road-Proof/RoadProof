@@ -26,7 +26,8 @@ Los informes completos y los datos sensibles del vehículo no se almacenan direc
 14. [Integración con el frontend](#integración-con-el-frontend)
 15. [Seguridad y buenas prácticas](#seguridad-y-buenas-prácticas)
 16. [Estado del proyecto y tareas pendientes](#estado-del-proyecto-y-tareas-pendientes)
-17. [Referencias](#referencias)
+17. [Roadmap](#roadmap)
+18. [Referencias](#referencias)
 
 ---
 
@@ -64,7 +65,7 @@ RoadProof separa la autorización de los directores técnicos del registro de la
               - Revocar autorización
               - Consultar autorización
                         |
-                        | estaAutorizado()
+                        | isAuthorized()
                         v
 Director técnico --> RoadProofRegistry
                      - Validar autorización
@@ -96,14 +97,13 @@ Los informes completos y la información complementaria se mantienen fuera de la
 
 ### Modelo de datos
 
-Cada revisión registrada contiene:
+Cada revisión se consulta mediante `inspectionId`. El struct `Inspection` almacena:
 
-- Identificador de la revisión.
-- Hash del informe.
-- Hash de referencia del vehículo.
-- Identificador del taller.
-- Resultado de la revisión.
-- Dirección de Ethereum que registró la revisión como director técnico.
+- `reportHash`: hash del informe.
+- `vehicleRefHash`: hash de referencia del vehículo.
+- `workshopId`: identificador del taller.
+- `result`: resultado de la revisión.
+- `technicalDirector`: dirección de Ethereum que registró la revisión como director técnico.
 
 La fecha y hora del registro se incluye únicamente en el evento `InspectionRegistered`, no en el estado almacenado de la revisión.
 
@@ -181,6 +181,7 @@ roadproof/
 │   ├── RoadProofAuthorization.sol
 │   └── RoadProofRegistry.sol
 ├── test/
+│   ├── RoadProofAuthorization.t.sol
 │   └── RoadProofRegistry.t.sol
 ├── script/
 │   ├── DeployRoadProof.s.sol
@@ -216,6 +217,8 @@ La configuración actual utiliza Solidity `0.8.37`, el entorno EVM `cancun`, opt
 
 ## Contratos inteligentes
 
+Los identificadores de contratos, funciones, parámetros, tipos, eventos, errores y pruebas se mantienen en inglés, tal como aparecen en el código fuente.
+
 ### 1. RoadProofAuthorization.sol
 
 Este contrato administra las autorizaciones de los directores técnicos.
@@ -223,26 +226,30 @@ Este contrato administra las autorizaciones de los directores técnicos.
 Su relación de autorización es específica por taller:
 
 ```text
-tallerId + dirección del DT -> autorizado / no autorizado
+workshopId + technicalDirector -> authorized (true / false)
 ```
 
 #### Funcionalidades
 
-**`autorizarDirectorTecnico(bytes32 tallerId, address directorTecnico)`**
+**`authorizeTechnicalDirector(bytes32 workshopId, address technicalDirector)`**
 
 Autoriza una dirección para actuar como director técnico de un taller.
 
-**`revocarDirectorTecnico(bytes32 tallerId, address directorTecnico)`**
+**`revokeTechnicalDirector(bytes32 workshopId, address technicalDirector)`**
 
 Revoca la autorización previamente otorgada.
 
-**`estaAutorizado(bytes32 tallerId, address directorTecnico)`**
+**`isAuthorized(bytes32 workshopId, address technicalDirector)`**
 
 Consulta si una dirección está autorizada para un taller.
 
-El contrato utiliza control de propiedad mediante OpenZeppelin `Ownable2Step`. Las operaciones administrativas requieren que la transacción sea ejecutada por el propietario del contrato. Para transferir la propiedad, el propietario actual llama a `transferOwnership(newOwner)` y el nuevo propietario debe confirmar con `acceptOwnership()`. Hasta esa confirmación, el propietario actual conserva sus permisos.
+El contrato utiliza control de propiedad mediante OpenZeppelin `Ownable2Step`. Las operaciones administrativas requieren que la transacción sea ejecutada por el propietario del contrato.
 
-La relación se almacena mediante el mapeo `directorTecnicoPorTaller`.
+La transferencia de propiedad se realiza en dos pasos: el propietario actual propone una dirección mediante `transferOwnership(newOwner)` y esa dirección confirma mediante `acceptOwnership()`. Hasta la aceptación, el propietario actual conserva sus permisos y puede reemplazar la propuesta o cancelarla con `transferOwnership(address(0))`. La dirección propuesta puede consultarse mediante `pendingOwner()`.
+
+`renounceOwnership()` está deshabilitada: las llamadas del propietario revierten con `OwnershipRenunciationDisabled`, para evitar que las autorizaciones de los directores técnicos queden sin administración.
+
+La relación se almacena mediante el mapeo `authorizedDirectorsByWorkshop`.
 
 ### 2. IRoadProofAuthorization.sol
 
@@ -251,10 +258,10 @@ Define la interfaz utilizada por el contrato de registro para consultar las auto
 La función principal es:
 
 ```solidity
-estaAutorizado(bytes32 tallerId, address directorTecnico)
+function isAuthorized(bytes32 workshopId, address technicalDirector)
     external
     view
-    returns (bool autorizado);
+    returns (bool authorized);
 ```
 
 Esta interfaz desacopla la consulta de autorización de la implementación concreta que administra los permisos.
@@ -266,10 +273,10 @@ Es el contrato responsable de registrar y consultar las revisiones técnicas.
 #### Resultados admitidos
 
 ```solidity
-enum Resultado {
-    APTO,
-    CONDICIONAL,
-    RECHAZADO
+enum InspectionResult {
+    PASS,
+    CONDITIONAL,
+    REJECTED
 }
 ```
 
@@ -277,23 +284,33 @@ Los valores numéricos correspondientes son `0`, `1` y `2`, respectivamente.
 
 #### Funcionalidades principales
 
-**`registrarRevision(...)`**
+**`registerInspection(...)`**
 
 Registra una revisión si se cumplen las validaciones del contrato, incluida la autorización del director técnico para el taller indicado.
 
-**`revisionExiste(bytes32 revisionId)`**
+```solidity
+function registerInspection(
+    bytes32 inspectionId,
+    bytes32 reportHash,
+    bytes32 vehicleRefHash,
+    bytes32 workshopId,
+    InspectionResult result
+) external;
+```
+
+**`inspectionExists(bytes32 inspectionId)`**
 
 Permite consultar si existe un registro para un identificador de revisión.
 
-**`revisiones(bytes32 revisionId)`**
+**`inspections(bytes32 inspectionId)`**
 
 Permite consultar la información almacenada para una revisión.
 
-**`verificarIntegridad(bytes32 revisionId, bytes32 hashCalculado)`**
+**`verifyIntegrity(bytes32 inspectionId, bytes32 computedHash)`**
 
 Permite comprobar si el hash proporcionado coincide con el hash del informe registrado.
 
-El contrato mantiene una referencia al contrato de autorización mediante `contratoAutorizacion`.
+El contrato mantiene una referencia al contrato de autorización mediante `authorizationContract`.
 
 #### Validaciones relevantes
 
@@ -308,24 +325,24 @@ Si una validación falla, la operación se revierte y no se completa el registro
 
 #### Eventos
 
-Las operaciones relevantes emiten eventos para facilitar la trazabilidad de las transacciones. El evento `RevisionRegistrada` permite identificar el registro realizado y consultar los datos asociados a esa operación en los logs de la blockchain.
+Las operaciones relevantes emiten eventos para facilitar la trazabilidad de las transacciones. El evento `InspectionRegistered` permite identificar el registro realizado y consultar los datos asociados a esa operación en los logs de la blockchain.
 
 ## Flujo funcional
 
 ### 1. Autorización de un director técnico
 
-1. El administrador ejecuta `autorizarDirectorTecnico`.
+1. El administrador ejecuta `authorizeTechnicalDirector`.
 2. El contrato almacena la autorización para la combinación de taller y dirección.
 3. La autorización queda disponible para las siguientes operaciones de registro.
 
 ### 2. Registro de una revisión
 
 1. El director técnico prepara los datos de la revisión.
-2. Se invoca `registrarRevision`.
-3. El contrato consulta `estaAutorizado` para el taller indicado.
+2. Se invoca `registerInspection`.
+3. El contrato consulta `isAuthorized` para el taller indicado.
 4. Si la dirección no está autorizada, la operación se revierte.
 5. Si está autorizada y las restantes validaciones se cumplen, la revisión se registra.
-6. El contrato emite `RevisionRegistrada`.
+6. El contrato emite `InspectionRegistered`.
 
 ### 3. Verificación de integridad
 
@@ -361,13 +378,15 @@ Esta es la validación general que debe ejecutarse después de modificar los con
 ### 3. Ejecutar las pruebas de RoadProof
 
 ```bash
-forge test --match-path test/RoadProofRegistry.t.sol -vv
+forge test --match-path 'test/RoadProof*.t.sol' -vv
 ```
+
+`RoadProofAuthorization.t.sol` contiene las pruebas de autorizaciones y consultas de permisos. `RoadProofRegistry.t.sol` contiene las pruebas del registro, la integridad de los informes y la integración con el contrato de autorización.
 
 Para obtener más información durante la ejecución:
 
 ```bash
-forge test --match-path test/RoadProofRegistry.t.sol -vvv
+forge test --match-path 'test/RoadProof*.t.sol' -vvv
 ```
 
 ### 4. Ejecutar una prueba específica
@@ -376,7 +395,7 @@ Para comprobar el rechazo de un director técnico no autorizado:
 
 ```bash
 forge test \
-  --match-test testDirectorNoAutorizadoNoPuedeRegistrarRevision \
+  --match-test testUnauthorizedDirectorCannotRegisterInspection \
   -vv
 ```
 
@@ -462,24 +481,48 @@ cast block-number --rpc-url http://127.0.0.1:8545
 
 ### 3. Desplegar los contratos
 
-El script `script/DeployRoadProof.s.sol` despliega primero el contrato de autorización y después el registro, pasando la dirección del primero al constructor del segundo.
+Desplegar primero `RoadProofAuthorization` y después `RoadProofRegistry`, pasando la dirección del primero al constructor del segundo.
 
-En la terminal del proyecto, ejecutar:
+El archivo actual `script/DeployRoadProof.s.sol` contiene un contrato llamado `InteractRoadProof` que interactúa con direcciones existentes. Para desplegar los contratos, utilizar `forge create` como se muestra a continuación.
+
+En la terminal del proyecto, definir `ANVIL_OWNER_PK` con la clave privada de la primera cuenta de prueba de la instancia actual de Anvil:
 
 ```bash
-forge script script/DeployRoadProof.s.sol:DeployRoadProof \
+export ANVIL_OWNER_PK="<ANVIL_OWNER_PRIVATE_KEY>"
+```
+
+Reemplazar el marcador de posición por la clave correspondiente, sin incluirla en archivos versionados.
+
+Desplegar el contrato de autorización:
+
+```bash
+forge create src/RoadProofAuthorization.sol:RoadProofAuthorization \
   --rpc-url http://127.0.0.1:8545 \
   --broadcast \
   --private-key "$ANVIL_OWNER_PK"
 ```
 
-Antes, definir `ANVIL_OWNER_PK` con la clave privada de la primera cuenta de prueba de la instancia actual de Anvil:
+Guardar la dirección indicada en `Deployed to`:
 
 ```bash
-export ANVIL_OWNER_PK=CLAVE_PRIVADA_LOCAL_DEL_PROPIETARIO
+export AUTHORIZATION_ADDRESS="<AUTHORIZATION_CONTRACT_ADDRESS>"
 ```
 
-Reemplazar el valor de ejemplo por la clave correspondiente, sin incluirla en archivos versionados.
+Desplegar el registro con esa dirección como argumento `authorizationAddress`:
+
+```bash
+forge create src/RoadProofRegistry.sol:RoadProofRegistry \
+  --rpc-url http://127.0.0.1:8545 \
+  --broadcast \
+  --private-key "$ANVIL_OWNER_PK" \
+  --constructor-args "$AUTHORIZATION_ADDRESS"
+```
+
+Guardar también la dirección de `RoadProofRegistry`:
+
+```bash
+export REGISTRY_ADDRESS="<REGISTRY_CONTRACT_ADDRESS>"
+```
 
 El despliegue debe informar las direcciones de ambos contratos y el resultado de las transacciones.
 
@@ -508,7 +551,7 @@ Se necesita una segunda cuenta de prueba de Anvil, distinta de la cuenta propiet
 En la terminal donde se ejecutarán los scripts:
 
 ```bash
-export DIRECTOR_PK=CLAVE_PRIVADA_LOCAL_DEL_DIRECTOR
+export DIRECTOR_PK="<ANVIL_DIRECTOR_PRIVATE_KEY>"
 ```
 
 Usar la clave de una cuenta de prueba de la instancia actual de Anvil.
@@ -516,7 +559,7 @@ Usar la clave de una cuenta de prueba de la instancia actual de Anvil.
 Comprobar que la variable está configurada sin mostrar su contenido:
 
 ```bash
-test -n "$DIRECTOR_PK" && echo "DIRECTOR_PK configurada"
+test -n "$DIRECTOR_PK" && echo "DIRECTOR_PK is configured"
 ```
 
 ### 2. Ejecutar el script de interacción
@@ -533,8 +576,8 @@ El script utiliza las direcciones de los contratos desplegados localmente. Si se
 La ejecución realiza las siguientes operaciones:
 
 1. Calcula identificadores y hashes de prueba.
-2. Autoriza al director técnico para `TALLER-001`.
-3. Registra una revisión con resultado `APTO`, utilizando la cuenta del director técnico.
+2. Autoriza al director técnico para `WORKSHOP-001`.
+3. Registra una revisión con resultado `PASS`, utilizando la cuenta del director técnico.
 4. Comprueba que el identificador de revisión existe.
 5. Verifica que el hash del informe coincida con el almacenado.
 6. Comprueba que se guardó la referencia del vehículo.
@@ -545,8 +588,8 @@ El resultado esperado es una ejecución exitosa y dos transacciones confirmadas:
 
 Durante la validación local se obtuvo una ejecución exitosa con los siguientes resultados:
 
-- `autorizarDirectorTecnico`: bloque 2.
-- `registrarRevision`: bloque 3.
+- `authorizeTechnicalDirector`: bloque 2.
+- `registerInspection`: bloque 3.
 - Gas utilizado por la autorización: 49.002 unidades.
 - Gas utilizado por el registro: 166.250 unidades.
 - Estado de ejecución: `ONCHAIN EXECUTION COMPLETE & SUCCESSFUL`.
@@ -564,10 +607,10 @@ Estas pruebas permiten observar el comportamiento del contrato ante una llamada 
 En la terminal donde se ejecutarán los comandos:
 
 ```bash
-TALLER_ID=$(cast keccak "TALLER-001")
-REVISION_ID=$(cast keccak "REVISION-NO-AUTORIZADA-001")
-INFORME_HASH=$(cast keccak "INFORME-NO-AUTORIZADO")
-VEHICULO_HASH=$(cast keccak "VEHICULO-NO-AUTORIZADO")
+WORKSHOP_ID=$(cast keccak "WORKSHOP-001")
+INSPECTION_ID=$(cast keccak "UNAUTHORIZED-INSPECTION-001")
+REPORT_HASH=$(cast keccak "UNAUTHORIZED-REPORT")
+VEHICLE_REF_HASH=$(cast keccak "UNAUTHORIZED-VEHICLE")
 ```
 
 Los identificadores se calculan utilizando `keccak256` y corresponden exclusivamente a datos ficticios de prueba.
@@ -578,11 +621,11 @@ Ejecutar la transacción con la clave de la cuenta propietaria, que no fue autor
 
 ```bash
 cast send "$REGISTRY_ADDRESS" \
-  "registrarRevision(bytes32,bytes32,bytes32,bytes32,uint8)" \
-  "$REVISION_ID" \
-  "$INFORME_HASH" \
-  "$VEHICULO_HASH" \
-  "$TALLER_ID" \
+  "registerInspection(bytes32,bytes32,bytes32,bytes32,uint8)" \
+  "$INSPECTION_ID" \
+  "$REPORT_HASH" \
+  "$VEHICLE_REF_HASH" \
+  "$WORKSHOP_ID" \
   0 \
   --rpc-url http://127.0.0.1:8545 \
   --private-key "$ANVIL_OWNER_PK"
@@ -591,24 +634,24 @@ cast send "$REGISTRY_ADDRESS" \
 Antes de ejecutar el comando, definir la dirección del registro desplegado:
 
 ```bash
-export REGISTRY_ADDRESS=DIRECCION_LOCAL_DE_ROADPROOF_REGISTRY
+export REGISTRY_ADDRESS=YOUR_REGISTRY_CONTRACT_ADDRESS
 ```
 
 El resultado esperado es un rechazo con el error personalizado:
 
 ```text
-DirectorTecnicoNoAutorizado
+TechnicalDirectorNotAuthorized
 ```
 
-En la ejecución validada, `cast send` informó:
+Con la ABI actual, el selector de `TechnicalDirectorNotAuthorized()` es `0xda13c00f`. El mensaje de `cast send` puede incluir:
 
 ```text
 Failed to estimate gas
-execution reverted: custom error 0xca5cf4fe
-DirectorTecnicoNoAutorizado
+execution reverted: custom error 0xda13c00f
+TechnicalDirectorNotAuthorized
 ```
 
-La llamada fue rechazada durante la estimación de gas. Por ese motivo, no llegó a minarse como una transacción fallida.
+Si la llamada se rechaza durante la estimación de gas, no llega a minarse como una transacción fallida.
 
 ### 3. Repetir la operación con un director autorizado
 
@@ -616,11 +659,11 @@ Utilizar el mismo taller y los mismos datos, pero firmar la transacción con la 
 
 ```bash
 cast send "$REGISTRY_ADDRESS" \
-  "registrarRevision(bytes32,bytes32,bytes32,bytes32,uint8)" \
-  "$REVISION_ID" \
-  "$INFORME_HASH" \
-  "$VEHICULO_HASH" \
-  "$TALLER_ID" \
+  "registerInspection(bytes32,bytes32,bytes32,bytes32,uint8)" \
+  "$INSPECTION_ID" \
+  "$REPORT_HASH" \
+  "$VEHICLE_REF_HASH" \
+  "$WORKSHOP_ID" \
   0 \
   --rpc-url http://127.0.0.1:8545 \
   --private-key "$DIRECTOR_PK"
@@ -639,8 +682,8 @@ En la ejecución validada se obtuvo:
 
 ```bash
 cast call "$REGISTRY_ADDRESS" \
-  "revisionExiste(bytes32)(bool)" \
-  "$REVISION_ID" \
+  "inspectionExists(bytes32)(bool)" \
+  "$INSPECTION_ID" \
   --rpc-url http://127.0.0.1:8545
 ```
 
@@ -663,15 +706,15 @@ DIRECTOR_ADDRESS=$(cast wallet address --private-key "$DIRECTOR_PK")
 Definir la dirección del contrato de autorización:
 
 ```bash
-export AUTHORIZATION_ADDRESS=DIRECCION_LOCAL_DE_ROADPROOF_AUTHORIZATION
+export AUTHORIZATION_ADDRESS=YOUR_AUTHORIZATION_CONTRACT_ADDRESS
 ```
 
 Consultar:
 
 ```bash
 cast call "$AUTHORIZATION_ADDRESS" \
-  "estaAutorizado(bytes32,address)(bool)" \
-  "$TALLER_ID" \
+  "isAuthorized(bytes32,address)(bool)" \
+  "$WORKSHOP_ID" \
   "$DIRECTOR_ADDRESS" \
   --rpc-url http://127.0.0.1:8545
 ```
@@ -684,7 +727,7 @@ Las transacciones locales demostraron que:
 
 - Una dirección sin autorización para el taller no puede registrar una revisión.
 - Una dirección autorizada sí puede registrarla.
-- El registro emite un evento `RevisionRegistrada`.
+- El registro emite un evento `InspectionRegistered`.
 - La consulta posterior confirma la existencia de la revisión.
 
 Estas comprobaciones validan el control de autorización y el registro en la instancia local utilizada. No equivalen todavía a una validación en una red pública ni a una auditoría integral de seguridad.
@@ -711,8 +754,8 @@ Se necesita:
 Definir la URL RPC y la clave privada de despliegue en el entorno local:
 
 ```bash
-export SEPOLIA_RPC_URL="URL_RPC_DE_SEPOLIA"
-export SEPOLIA_PRIVATE_KEY="CLAVE_PRIVADA_DE_LA_CUENTA_DE_DESPLIEGUE"
+export SEPOLIA_RPC_URL="YOUR_SEPOLIA_RPC_URL"
+export SEPOLIA_PRIVATE_KEY="<SEPOLIA_TESTNET_PRIVATE_KEY>"
 ```
 
 Los valores anteriores son marcadores de posición y deben reemplazarse localmente.
@@ -724,10 +767,22 @@ No incorporar claves privadas, frases semilla ni tokens de proveedor RPC en el r
 Una vez configuradas las variables y verificado que la cuenta dispone de ETH de prueba:
 
 ```bash
-forge script script/DeployRoadProof.s.sol:DeployRoadProof \
+forge create src/RoadProofAuthorization.sol:RoadProofAuthorization \
   --rpc-url "$SEPOLIA_RPC_URL" \
   --broadcast \
   --private-key "$SEPOLIA_PRIVATE_KEY"
+```
+
+Guardar la dirección indicada en `Deployed to` y utilizarla para desplegar el registro:
+
+```bash
+export SEPOLIA_AUTHORIZATION_ADDRESS="<SEPOLIA_AUTHORIZATION_CONTRACT_ADDRESS>"
+
+forge create src/RoadProofRegistry.sol:RoadProofRegistry \
+  --rpc-url "$SEPOLIA_RPC_URL" \
+  --broadcast \
+  --private-key "$SEPOLIA_PRIVATE_KEY" \
+  --constructor-args "$SEPOLIA_AUTHORIZATION_ADDRESS"
 ```
 
 Antes de considerar finalizado el despliegue, comprobar:
@@ -804,10 +859,10 @@ Las direcciones de Anvil no deben utilizarse como direcciones de Sepolia.
 
 Entre las consultas disponibles se encuentran:
 
-- `estaAutorizado(tallerId, directorTecnico)`.
-- `revisionExiste(revisionId)`.
-- `revisiones(revisionId)`.
-- `verificarIntegridad(revisionId, hashCalculado)`.
+- `isAuthorized(workshopId, technicalDirector)`.
+- `inspectionExists(inspectionId)`.
+- `inspections(inspectionId)`.
+- `verifyIntegrity(inspectionId, computedHash)`.
 
 Estas funciones permiten consultar el estado de los contratos sin modificarlo.
 
@@ -815,9 +870,9 @@ Estas funciones permiten consultar el estado de los contratos sin modificarlo.
 
 Las siguientes operaciones modifican el estado de la blockchain:
 
-- `autorizarDirectorTecnico`.
-- `revocarDirectorTecnico`.
-- `registrarRevision`.
+- `authorizeTechnicalDirector`.
+- `revokeTechnicalDirector`.
+- `registerInspection`.
 
 La autorización y revocación deben ejecutarse con la cuenta administradora. El registro de una revisión debe firmarse con la cuenta del director técnico autorizado.
 
@@ -847,7 +902,8 @@ La integración de extremo a extremo todavía debe completarse y documentarse co
 
 Durante el desarrollo se aplican o se contemplan las siguientes medidas:
 
-- Control de acceso administrativo mediante OpenZeppelin `Ownable2Step`, con aceptación explícita del nuevo propietario al transferir la propiedad.
+- Control de acceso administrativo mediante OpenZeppelin `Ownable2Step`, con aceptación explícita del nuevo propietario.
+- Renuncia de propiedad deshabilitada para conservar la administración de permisos.
 - Autorización del director técnico específica por taller.
 - Rechazo de revisiones duplicadas.
 - Validación de identificadores y hashes.
@@ -903,6 +959,15 @@ Las pruebas actuales constituyen evidencia del comportamiento probado, pero no d
 - [ ] Probar el flujo de extremo a extremo desde el frontend.
 - [ ] Incorporar evidencia reproducible para la entrega académica.
 
+## Roadmap
+
+Luego del hito de la entrega, se propone continuar con los siguientes pasos:
+
+1. **Piloto con talleres:** probar el flujo completo con un grupo reducido de usuarios en testnet y ajustar la interfaz según sus comentarios.
+2. **Mejoras de consulta:** incorporar un historial de revisiones por referencia de vehículo, filtros por taller y fecha y una opción de consulta con código QR en el frontend y/o interfaz mobile.
+3. **Gestión de informes:** integrar almacenamiento externo con acceso controlado para recuperar los informes, calcular sus hashes y comprobar su integridad mediante `verifyIntegrity`.
+4. **Seguridad y escalamiento:** ampliar las pruebas de permisos y casos límite, realizar una revisión de seguridad antes de un uso real y medir el consumo de gas para evaluar una red EVM de menor costo para escalar el sistema.
+
 ## Referencias
 
 - Repositorio de RoadProof: https://github.com/Road-Proof/RoadProof
@@ -910,9 +975,3 @@ Las pruebas actuales constituyen evidencia del comportamiento probado, pero no d
 - Solidity: https://docs.soliditylang.org/
 - OpenZeppelin Contracts: https://docs.openzeppelin.com/contracts/
 - Ethereum Sepolia: https://sepolia.etherscan.io/
-
----
-
-**RoadProof — Documento de desarrollo y validación técnica.**
-
-Este README debe actualizarse a medida que se incorporen nuevas funcionalidades, se desplieguen los contratos en redes públicas y se complete la integración con el frontend. Los resultados, direcciones y enlaces de transacciones deben corresponder siempre a ejecuciones verificables del proyecto.
