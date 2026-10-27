@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {IRoadProofAuthorization} from "./IRoadProofAuthorization.sol";
 
 /// @title RoadProofAuthorization
 /// @author RoadProof
 /// @notice Manages technical director authorizations for each workshop.
 /// @dev Only the owner can authorize or revoke technical directors.
+///      Ownership transfers require acceptance by the pending owner.
+///      Ownership renunciation is disabled to preserve permission management.
 ///      Other contracts can query these permissions.
-contract RoadProofAuthorization is Ownable, IRoadProofAuthorization {
+contract RoadProofAuthorization is Ownable2Step, IRoadProofAuthorization {
     // ---------------------------------------------------------------
     // STATE
     // ---------------------------------------------------------------
@@ -33,6 +35,9 @@ contract RoadProofAuthorization is Ownable, IRoadProofAuthorization {
 
     /// @notice The technical director is not authorized for the workshop.
     error DirectorNotAuthorized();
+
+    /// @notice Ownership cannot be renounced because director permissions require an administrator.
+    error OwnershipRenunciationDisabled();
 
     // ---------------------------------------------------------------
     // EVENTS
@@ -61,6 +66,16 @@ contract RoadProofAuthorization is Ownable, IRoadProofAuthorization {
     /// @notice Initializes the contract.
     /// @dev The deployer becomes the initial owner.
     constructor() Ownable(msg.sender) {}
+
+    // ---------------------------------------------------------------
+    // OWNERSHIP MANAGEMENT
+    // ---------------------------------------------------------------
+
+    /// @notice Prevents the owner from permanently abandoning permission management.
+    /// @dev Always reverts with OwnershipRenunciationDisabled when called by the owner.
+    function renounceOwnership() public view override onlyOwner {
+        revert OwnershipRenunciationDisabled();
+    }
 
     // ---------------------------------------------------------------
     // AUTHORIZATION MANAGEMENT
