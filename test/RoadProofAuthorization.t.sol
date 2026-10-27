@@ -26,8 +26,9 @@ contract RoadProofAuthorizationTest is Test {
     // OWNERSHIP MANAGEMENT
     // ---------------------------------------------------------------
 
-    function testPendingOwnerCannotManageDirectorsBeforeAccepting() public {
+    function testPendingOwnerCannotManageDirectors() public {
         address newOwner = makeAddr("newOwner");
+
         authorization.transferOwnership(newOwner);
 
         assertEq(authorization.owner(), address(this));
@@ -38,6 +39,7 @@ contract RoadProofAuthorizationTest is Test {
         authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
 
         authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
+        assertTrue(authorization.isAuthorized(workshopId, technicalDirector));
 
         vm.prank(newOwner);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, newOwner));
@@ -47,7 +49,7 @@ contract RoadProofAuthorizationTest is Test {
         assertFalse(authorization.isAuthorized(workshopId, technicalDirector));
     }
 
-    function testAcceptingOwnershipTransfersAdministrativePermissions() public {
+    function testAcceptedOwnerCanManageDirectors() public {
         address newOwner = makeAddr("newOwner");
         authorization.authorizeTechnicalDirector(workshopId, technicalDirector);
         authorization.transferOwnership(newOwner);
@@ -74,13 +76,17 @@ contract RoadProofAuthorizationTest is Test {
         assertTrue(authorization.isAuthorized(workshopId, technicalDirector));
     }
 
-    function testUnauthorizedUserCannotTransferOrAcceptOwnership() public {
-        address newOwner = makeAddr("newOwner");
-
+    function testOnlyOwnerCanStartOwnershipTransfer() public {
         vm.prank(unauthorizedUser);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, unauthorizedUser));
         authorization.transferOwnership(unauthorizedUser);
 
+        assertEq(authorization.owner(), address(this));
+        assertEq(authorization.pendingOwner(), address(0));
+    }
+
+    function testOnlyPendingOwnerCanAcceptOwnership() public {
+        address newOwner = makeAddr("newOwner");
         authorization.transferOwnership(newOwner);
 
         vm.prank(unauthorizedUser);
