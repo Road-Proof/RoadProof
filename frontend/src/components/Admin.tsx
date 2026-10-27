@@ -6,7 +6,7 @@ import { AUTHORIZATION, authorizationAbi } from '../lib/contracts'
 import { short, toBytes32 } from '../lib/hash'
 import { TxStatus } from '../lib/ui'
 
-/** Pantalla del administrador (owner de RoadProofAuthorization): autoriza y revoca Directores Técnicos por taller. */
+/** Administrator screen (owner of RoadProofAuthorization): authorizes and revokes Technical Directors per workshop. */
 export function Admin({ wrongChain }: { wrongChain: boolean }) {
   const { address, isConnected } = useAccount()
   const [workshop, setWorkshop] = useState('')
@@ -26,33 +26,33 @@ export function Admin({ wrongChain }: { wrongChain: boolean }) {
 
   async function run(fn: 'authorizeTechnicalDirector' | 'revokeTechnicalDirector') {
     const base = { address: AUTHORIZATION, abi: authorizationAbi, chainId: TARGET.id, args: [toBytes32(workshop), director as Address] } as const
-    try { await writeContractAsync({ ...base, functionName: fn }) } catch { /* se muestra desde el hook */ }
+    try { await writeContractAsync({ ...base, functionName: fn }) } catch { /* shown from the hook */ }
   }
 
   const canSend = isConnected && !wrongChain && isOwner && valid && !isPending && !confirming
 
   return (
     <section className="card">
-      <h2>Administración de Directores Técnicos</h2>
-      <p className="hint">Administrador del contrato: <code>{owner ?? '…'}</code></p>
-      {isConnected && owner && !isOwner && <p className="errmsg">Tu wallet no es la administradora; solo podés consultar el estado.</p>}
-      {!isConnected && <p className="info">Conectá la wallet administradora para operar.</p>}
+      <h2>Technical Director administration</h2>
+      <p className="hint">Contract administrator: <code>{owner ?? '…'}</code></p>
+      {isConnected && owner && !isOwner && <p className="errmsg">Your wallet is not the administrator; you can only check status.</p>}
+      {!isConnected && <p className="info">Connect the administrator wallet to operate.</p>}
 
       <div className="col">
-        <label>Taller
-          <input value={workshop} onChange={(e) => setWorkshop(e.target.value)} placeholder="ID de taller (ej. WORKSHOP-001)" />
+        <label>Workshop
+          <input value={workshop} onChange={(e) => setWorkshop(e.target.value)} placeholder="Workshop ID (e.g. WORKSHOP-001)" />
         </label>
-        {workshop.trim() && <p className="small">ID de taller on-chain: <code>{short(toBytes32(workshop))}</code></p>}
-        <label>Wallet del Director Técnico
+        {workshop.trim() && <p className="small">On-chain workshop ID: <code>{short(toBytes32(workshop))}</code></p>}
+        <label>Technical Director wallet
           <input value={director} onChange={(e) => setDirector(e.target.value)} placeholder="0x…" />
         </label>
-        {director && !isAddress(director) && <p className="errmsg">Dirección inválida.</p>}
+        {director && !isAddress(director) && <p className="errmsg">Invalid address.</p>}
         {valid && current !== undefined && (
-          <p className={current ? 'okmsg' : 'info'}>Estado actual: {current ? 'AUTORIZADO' : 'no autorizado'} para este taller.</p>
+          <p className={current ? 'okmsg' : 'info'}>Current status: {current ? 'AUTHORIZED' : 'not authorized'} for this workshop.</p>
         )}
         <div className="row">
-          <button disabled={!canSend} onClick={() => run('authorizeTechnicalDirector')}>Autorizar</button>
-          <button disabled={!canSend} className="danger" onClick={() => run('revokeTechnicalDirector')}>Revocar</button>
+          <button disabled={!canSend} onClick={() => run('authorizeTechnicalDirector')}>Authorize</button>
+          <button disabled={!canSend} className="danger" onClick={() => run('revokeTechnicalDirector')}>Revoke</button>
         </div>
       </div>
       <TxStatus hash={hash} pending={isPending} confirming={confirming} success={isSuccess} error={error} />

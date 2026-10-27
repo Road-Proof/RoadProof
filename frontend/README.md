@@ -3,10 +3,12 @@
 dApp en React + Vite + wagmi/viem para interactuar con `RoadProofAuthorization` y `RoadProofRegistry`.
 
 ## Pantallas
-- **Verificar** (sin wallet): consulta una revisión por ID (el QR apunta a `?id=...`), muestra resultado, DT, fecha y hash, y compara un archivo contra el hash on-chain (`verifyIntegrity`).
-- **Registrar revisión** (wallet del DT): comprueba `isAuthorized` para el taller indicado, calcula el hash del informe y llama a `registerInspection`. Al confirmar genera el QR.
-- **Por patente**: historial de revisiones de un vehículo. El contrato no indexa `vehicleRefHash`, así que se leen los eventos `InspectionRegistered` y se filtra en el cliente.
-- **Administración** (wallet owner): `authorizeTechnicalDirector` / `revokeTechnicalDirector` por taller.
+La interfaz y todo el código fuente (nombres, comentarios, mensajes y tests) están en inglés; este README es la única pieza en español.
+
+- **Verify** (sin wallet): consulta una revisión por ID (el QR apunta a `?id=...`), muestra resultado, DT, fecha y hash, y compara un archivo contra el hash on-chain (`verifyIntegrity`).
+- **Register inspection** (wallet del DT): comprueba `isAuthorized` para el taller indicado, calcula el hash del informe y llama a `registerInspection`. Al confirmar genera el QR.
+- **By plate**: historial de revisiones de un vehículo. El contrato no indexa `vehicleRefHash`, así que se leen los eventos `InspectionRegistered` y se filtra en el cliente.
+- **Admin** (wallet owner): `authorizeTechnicalDirector` / `revokeTechnicalDirector` por taller.
 
 ## Uso
 ```bash

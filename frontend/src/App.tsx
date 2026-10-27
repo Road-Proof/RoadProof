@@ -9,10 +9,10 @@ import { Admin } from './components/Admin'
 import { ByPlate } from './components/ByPlate'
 
 const tabs = [
-  { key: 'verify', label: 'Verificar' },
-  { key: 'plate', label: 'Por patente' },
-  { key: 'register', label: 'Registrar revisión' },
-  { key: 'admin', label: 'Administración' },
+  { key: 'verify', label: 'Verify' },
+  { key: 'plate', label: 'By plate' },
+  { key: 'register', label: 'Register inspection' },
+  { key: 'admin', label: 'Admin' },
 ] as const
 
 export default function App() {
@@ -30,18 +30,18 @@ export default function App() {
       <header>
         <div>
           <h1>RoadProof</h1>
-          <p className="hint">Trazabilidad de la RTO sobre Ethereum · {TARGET.name}</p>
+          <p className="hint">RTO traceability on Ethereum · {TARGET.name}</p>
         </div>
         {isConnected ? (
           <div className="row">
             <code>{short(address!)}</code>
-            <button className="ghost" onClick={() => disconnect()}>Desconectar</button>
+            <button className="ghost" onClick={() => disconnect()}>Disconnect</button>
           </div>
         ) : (
           <div className="row">
             {connectors.map((c) => (
               <button key={c.uid} disabled={isPending} onClick={() => connect({ connector: c })}>
-                {c.name === 'Injected' ? 'Wallet del navegador' : c.name}
+                {c.name === 'Injected' ? 'Browser wallet' : c.name}
               </button>
             ))}
           </div>
@@ -49,11 +49,11 @@ export default function App() {
       </header>
 
       {!CONFIGURED && (
-        <p className="errmsg banner">Faltan las direcciones de los contratos. Copiá <code>.env.example</code> a <code>.env.local</code> y completá <code>VITE_AUTHORIZATION_ADDRESS</code> y <code>VITE_REGISTRY_ADDRESS</code>.</p>
+        <p className="errmsg banner">Contract addresses are missing. Copy <code>.env.example</code> to <code>.env.local</code> and fill in <code>VITE_AUTHORIZATION_ADDRESS</code> and <code>VITE_REGISTRY_ADDRESS</code>.</p>
       )}
       {wrongChain && (
         <p className="errmsg banner">
-          Tu wallet está en otra red. <button onClick={() => switchChain({ chainId: TARGET.id })}>Cambiar a {TARGET.name}</button>
+          Your wallet is on a different network. <button onClick={() => switchChain({ chainId: TARGET.id })}>Switch to {TARGET.name}</button>
         </p>
       )}
 

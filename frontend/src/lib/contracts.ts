@@ -5,11 +5,11 @@ export const AUTHORIZATION = (import.meta.env.VITE_AUTHORIZATION_ADDRESS ?? '0x'
 export const CONFIGURED = /^0x[0-9a-fA-F]{40}$/.test(REGISTRY) && /^0x[0-9a-fA-F]{40}$/.test(AUTHORIZATION)
 export const DEPLOY_BLOCK = BigInt(import.meta.env.VITE_DEPLOY_BLOCK || 0)
 
-/** Mismo orden que el enum InspectionResult del contrato: PASS, CONDITIONAL, REJECTED. */
+/** Same order as the contract's InspectionResult enum: PASS, CONDITIONAL, REJECTED. */
 export const RESULTS = [
-  { value: 0, label: 'APTO', cls: 'ok' },
-  { value: 1, label: 'CONDICIONAL', cls: 'warn' },
-  { value: 2, label: 'RECHAZADO', cls: 'bad' },
+  { value: 0, label: 'PASS', cls: 'ok' },
+  { value: 1, label: 'CONDITIONAL', cls: 'warn' },
+  { value: 2, label: 'REJECTED', cls: 'bad' },
 ] as const
 
 export const registryAbi = parseAbi([

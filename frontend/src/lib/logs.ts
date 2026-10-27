@@ -9,7 +9,7 @@ export type Registered = {
   result: number; reportHash: Hex; timestamp: bigint; tx: Hex; block: bigint
 }
 
-/** Subconjunto del cliente público que usamos (facilita los tests). */
+/** Subset of the public client that we use (makes testing easier). */
 export type LogsClient = {
   getBlockNumber(): Promise<bigint>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -17,8 +17,8 @@ export type LogsClient = {
 }
 
 /**
- * Lee los eventos InspectionRegistered (opcionalmente de un solo inspectionId, que sí está indexado).
- * Si el RPC rechaza el rango completo, reintenta por tramos sobre los últimos `chunk * maxChunks` bloques.
+ * Reads the InspectionRegistered events (optionally for a single inspectionId, which is indexed).
+ * If the RPC rejects the full range, it retries in chunks over the last `chunk * maxChunks` blocks.
  */
 export async function fetchRegistered(
   client: LogsClient, inspectionId?: Hex, opts = { chunk: 5000n, maxChunks: 100 },
@@ -43,8 +43,8 @@ export async function fetchRegistered(
 }
 
 /**
- * Revisiones de un vehículo. El contrato no indexa `vehicleRefHash` en el evento,
- * así que se leen los eventos y se filtra en el cliente. Más recientes primero.
+ * Inspections of a vehicle. The contract does not index `vehicleRefHash` in the event,
+ * so the events are read and filtered on the client. Newest first.
  */
 export async function findByPlate(client: LogsClient, plate: string): Promise<Registered[]> {
   const ref = plateToBytes32(plate)

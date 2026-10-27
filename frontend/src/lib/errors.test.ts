@@ -11,22 +11,22 @@ const revert = (abi: typeof registryAbi | typeof authorizationAbi, errorName: st
   })
 
 describe('describeError', () => {
-  it('detecta el rechazo del usuario en la wallet', () => {
-    expect(describeError(new UserRejectedRequestError(new Error('no')))).toMatch(/Cancelaste/)
+  it('detects the user rejecting in the wallet', () => {
+    expect(describeError(new UserRejectedRequestError(new Error('no')))).toMatch(/cancelled/)
   })
-  it('traduce TechnicalDirectorNotAuthorized', () => {
-    expect(describeError(revert(registryAbi, 'TechnicalDirectorNotAuthorized'))).toMatch(/no está autorizada/)
+  it('translates TechnicalDirectorNotAuthorized', () => {
+    expect(describeError(revert(registryAbi, 'TechnicalDirectorNotAuthorized'))).toMatch(/not authorized/)
   })
-  it('traduce DuplicateInspection', () => {
-    expect(describeError(revert(registryAbi, 'DuplicateInspection'))).toMatch(/Ya existe/)
+  it('translates DuplicateInspection', () => {
+    expect(describeError(revert(registryAbi, 'DuplicateInspection'))).toMatch(/already exists/)
   })
-  it('traduce DirectorAlreadyAuthorized del contrato de autorización', () => {
-    expect(describeError(revert(authorizationAbi, 'DirectorAlreadyAuthorized'))).toMatch(/ya está autorizado/)
+  it('translates DirectorAlreadyAuthorized from the authorization contract', () => {
+    expect(describeError(revert(authorizationAbi, 'DirectorAlreadyAuthorized'))).toMatch(/already authorized/)
   })
-  it('usa el mensaje corto para otros errores de viem', () => {
-    expect(describeError(new BaseError('fallo de red'))).toBe('fallo de red')
+  it('uses the short message for other viem errors', () => {
+    expect(describeError(new BaseError('network failure'))).toBe('network failure')
   })
-  it('responde algo razonable ante errores desconocidos', () => {
-    expect(describeError('boom')).toBe('Error desconocido.')
+  it('returns a sensible message for unknown errors', () => {
+    expect(describeError('boom')).toBe('Unknown error.')
   })
 })

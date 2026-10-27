@@ -7,7 +7,7 @@ import { AUTHORIZATION, REGISTRY, RESULTS, authorizationAbi, registryAbi } from 
 import { fileToHash, plateToBytes32, short, toBytes32 } from '../lib/hash'
 import { TxStatus } from '../lib/ui'
 
-/** Pantalla del Director Técnico: registra una revisión firmando con su wallet. */
+/** Technical Director screen: registers an inspection by signing with their wallet. */
 export function Register({ wrongChain }: { wrongChain: boolean }) {
   const { address, isConnected } = useAccount()
   const [workshop, setWorkshop] = useState('')
@@ -35,48 +35,48 @@ export function Register({ wrongChain }: { wrongChain: boolean }) {
         address: REGISTRY, abi: registryAbi, functionName: 'registerInspection', chainId: TARGET.id,
         args: [toBytes32(idText), reportHash, plateToBytes32(plate), toBytes32(workshop), result],
       })
-    } catch { /* el error se muestra desde el hook */ }
+    } catch { /* the error is shown from the hook */ }
   }
 
   const link = `${window.location.origin}${window.location.pathname}?id=${encodeURIComponent(idText.trim())}`
 
   return (
     <section className="card">
-      <h2>Registrar una revisión</h2>
-      <p className="hint">Solo una wallet autorizada para el taller indicado puede registrar. La autorización de un taller no vale para otro.</p>
-      {!isConnected && <p className="info">Conectá tu wallet para registrar.</p>}
+      <h2>Register an inspection</h2>
+      <p className="hint">Only a wallet authorized for the given workshop can register. Authorization for one workshop does not apply to another.</p>
+      {!isConnected && <p className="info">Connect your wallet to register.</p>}
 
       <form onSubmit={submit} className="col">
-        <label>Taller
-          <input value={workshop} onChange={(e) => setWorkshop(e.target.value)} placeholder="ID de taller (ej. WORKSHOP-001)" />
+        <label>Workshop
+          <input value={workshop} onChange={(e) => setWorkshop(e.target.value)} placeholder="Workshop ID (e.g. WORKSHOP-001)" />
         </label>
-        {workshop.trim() && <p className="small">Registrarás para el taller <code>{short(toBytes32(workshop))}</code></p>}
-        {isConnected && workshop.trim() && authorized === true && <p className="okmsg">✔ Tu wallet está autorizada para este taller.</p>}
-        {isConnected && workshop.trim() && authorized === false && <p className="errmsg">✘ Tu wallet NO está autorizada para este taller; la transacción será rechazada.</p>}
+        {workshop.trim() && <p className="small">You will register for workshop <code>{short(toBytes32(workshop))}</code></p>}
+        {isConnected && workshop.trim() && authorized === true && <p className="okmsg">✔ Your wallet is authorized for this workshop.</p>}
+        {isConnected && workshop.trim() && authorized === false && <p className="errmsg">✘ Your wallet is NOT authorized for this workshop; the transaction will be rejected.</p>}
 
-        <label>ID de revisión
+        <label>Inspection ID
           <span className="row">
             <input value={idText} onChange={(e) => setIdText(e.target.value)} placeholder="RTO-2026-000123" />
-            <button type="button" className="ghost" onClick={() => setIdText(`RTO-${Date.now()}`)}>Generar</button>
+            <button type="button" className="ghost" onClick={() => setIdText(`RTO-${Date.now()}`)}>Generate</button>
           </span>
         </label>
-        <label>Patente del vehículo
+        <label>Vehicle license plate
           <input value={plate} onChange={(e) => setPlate(e.target.value)} placeholder="AB123CD" />
         </label>
-        <label>Resultado
+        <label>Result
           <select value={result} onChange={(e) => setResult(Number(e.target.value))}>
             {RESULTS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </label>
-        <label>Informe de la revisión (archivo)
+        <label>Inspection report (file)
           <input type="file" onChange={async (e) => {
             const f = e.target.files?.[0]
             setReportHash(f ? await fileToHash(f) : undefined); setFileName(f?.name ?? '')
           }} />
         </label>
-        {reportHash && <p className="small">Hash de «{fileName}»: <code>{reportHash}</code></p>}
+        {reportHash && <p className="small">Hash of “{fileName}”: <code>{reportHash}</code></p>}
 
-        <button disabled={!ready || isPending || confirming}>Firmar y registrar</button>
+        <button disabled={!ready || isPending || confirming}>Sign and register</button>
       </form>
 
       <TxStatus hash={hash} pending={isPending} confirming={confirming} success={isSuccess} error={error} />
@@ -85,9 +85,9 @@ export function Register({ wrongChain }: { wrongChain: boolean }) {
         <div className="qr">
           <QRCodeSVG value={link} size={168} />
           <div>
-            <p>Revisión registrada. Este QR lleva a la pantalla de verificación:</p>
+            <p>Inspection registered. This QR code leads to the verification screen:</p>
             <p className="small"><a href={link}>{link}</a></p>
-            <button className="ghost" onClick={() => { reset(); setIdText(''); setReportHash(undefined); setFileName('') }}>Registrar otra</button>
+            <button className="ghost" onClick={() => { reset(); setIdText(''); setReportHash(undefined); setFileName('') }}>Register another</button>
           </div>
         </div>
       )}
