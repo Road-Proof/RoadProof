@@ -131,6 +131,17 @@ contract RoadProofRegistryTest is Test {
         registry.registerInspection(
             inspectionId, bytes32(0), vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.PASS
         );
+
+        assertFalse(registry.inspectionExists(inspectionId));
+
+        // A rejected report hash must not reserve the inspection identifier.
+        vm.prank(technicalDirector);
+        registry.registerInspection(
+            inspectionId, reportHash, vehicleRefHash, workshopId, RoadProofRegistry.InspectionResult.PASS
+        );
+
+        assertTrue(registry.inspectionExists(inspectionId));
+        assertTrue(registry.verifyIntegrity(inspectionId, reportHash));
     }
 
     function testCannotRegisterWithZeroVehicleHash() public {
@@ -167,8 +178,13 @@ contract RoadProofRegistryTest is Test {
     }
 
     // ---------------------------------------------------------------
-    // REPORT INTEGRITY
+    // INSPECTION QUERIES
     // ---------------------------------------------------------------
+
+    function testInspectionExistsReturnsFalseForUnregisteredInspection() public view {
+        assertFalse(registry.inspectionExists(inspectionId));
+        assertFalse(registry.inspectionExists(bytes32(0)));
+    }
 
     function testDetectsIncorrectReportHash() public {
         authorization.authorizeTechnicalDirector(workshopId, technicalDirector);

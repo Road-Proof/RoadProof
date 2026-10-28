@@ -18,6 +18,7 @@ contract RoadProofAuthorization is Ownable2Step, IRoadProofAuthorization {
 
     /// @notice Indicates which technical directors are authorized for each workshop.
     /// @dev workshopId => technical director => authorized.
+    /// @return True if the supplied technical director is authorized for the supplied workshop.
     mapping(bytes32 => mapping(address => bool)) public authorizedDirectorsByWorkshop;
 
     // ---------------------------------------------------------------
