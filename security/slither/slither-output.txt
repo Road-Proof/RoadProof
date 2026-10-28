@@ -1,0 +1,9 @@
+Command: forge build --offline --build-info --force
+Compiling 30 files with Solc 0.8.38
+Solc 0.8.38 finished in 1.15s
+Compiler run successful!
+2026-10-28T01:54:44.159104Z  WARN evm::traces: failed to flush signature cache err=failed to create file "/Users/juani.eth/.foundry/cache/signatures": Operation not permitted (os error 1)
+
+Command: .tools/slither-venv/bin/slither . --json -
+
+Exit code: 255

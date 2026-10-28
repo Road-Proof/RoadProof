@@ -1,0 +1,145 @@
+{
+  "recorded_at": "2026-10-27T19:57:10.671544-06:00",
+  "analysis_target": ".",
+  "scope": [
+    "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
+    "lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol",
+    "lib/openzeppelin-contracts/contracts/utils/Context.sol",
+    "src/IRoadProofAuthorization.sol",
+    "src/RoadProofAuthorization.sol",
+    "src/RoadProofRegistry.sol"
+  ],
+  "detectors": 102,
+  "contracts_and_interfaces": 6,
+  "filters_or_detector_exclusions": [],
+  "baseline_head": "f6bbe6c1e8d613f436199c359bb284c1ea3e3044",
+  "final_head": "f6bbe6c1e8d613f436199c359bb284c1ea3e3044",
+  "working_tree_analyzed": true,
+  "forge": "forge Version: 1.8.3\nCommit SHA: cae51ad458f6abb64852b7709eb784352429825d\nBuild Timestamp: 2026-09-15T10:34:23.361078000Z (1789468463)\nBuild Profile: dist",
+  "python": "3.14.6",
+  "python_packages": {
+    "aiohappyeyeballs": "2.7.1",
+    "aiohttp": "3.14.5",
+    "aiosignal": "1.4.0",
+    "annotated-types": "0.8.0",
+    "attrs": "26.1.0",
+    "bitarray": "3.12.3",
+    "cbor2": "6.1.5",
+    "certifi": "2026.10.23",
+    "charset-normalizer": "3.5.2",
+    "ckzg": "2.1.8",
+    "crytic-compile": "0.4.2",
+    "cytoolz": "1.2.0",
+    "eth-account": "0.14.0",
+    "eth-hash": "0.8.0",
+    "eth-keyfile": "0.10.0",
+    "eth-keys": "0.8.0",
+    "eth-rlp": "3.0.0",
+    "eth-typing": "6.0.0",
+    "eth-utils": "6.0.0",
+    "eth_abi": "6.0.0",
+    "frozenlist": "1.8.0",
+    "hexbytes": "2.0.0",
+    "idna": "3.20",
+    "multidict": "7.2.1",
+    "packaging": "26.3",
+    "parsimonious": "0.10.0",
+    "prettytable": "3.18.0",
+    "propcache": "0.5.4",
+    "py-ecc": "8.0.0",
+    "pycryptodome": "3.24.1",
+    "pydantic": "2.14.1",
+    "pydantic_core": "2.50.1",
+    "pyunormalize": "18.0.0",
+    "regex": "2026.9.29",
+    "requests": "2.34.2",
+    "rlp": "5.0.0",
+    "slither-analyzer": "0.11.6",
+    "solc-select": "1.2.0",
+    "toolz": "1.2.0",
+    "types-requests": "2.33.0.20261006",
+    "typing-inspection": "0.4.4",
+    "typing_extensions": "4.16.0",
+    "urllib3": "2.8.0",
+    "wcwidth": "0.9.4",
+    "web3": "7.16.0",
+    "websockets": "15.0.1",
+    "yarl": "1.25.1"
+  },
+  "openzeppelin_commit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3",
+  "forge_std_commit": "f3dae6e6ee381f25eb6a246f7da9b85c91a68219",
+  "before": {
+    "solc": "0.8.37",
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "evm_version": "cancun",
+    "foundry_toml_sha256": "c56a6ffacd9c8880912b35ab728c91813f895123ee9f6c8116cf1a0caae5d9b8",
+    "source_sha256": {
+      "lib/openzeppelin-contracts/contracts/access/Ownable.sol": "38578bd71c0a909840e67202db527cc6b4e6b437e0f39f0c909da32c1e30cb81",
+      "lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol": "c75345d7b9feef17ae29f2a800ca2f65f8021cf80436a41d6ec00f57f5180f36",
+      "lib/openzeppelin-contracts/contracts/utils/Context.sol": "847fda5460fee70f56f4200f59b82ae622bb03c79c77e67af010e31b7e2cc5b6",
+      "src/IRoadProofAuthorization.sol": "3a57f92a2dd0a01e4806b0ea67ee22e283877379bd80d90ce16a81af885cb549",
+      "src/RoadProofAuthorization.sol": "c4be540c9fcc47fde83a9256f89afe3a5992e9079bd2cd0fee2d4aea6c5d64ec",
+      "src/RoadProofRegistry.sol": "69da7fb98293d8c03953fbd3e56f309d85e270bff6e67bcb71e732e6c3083c78"
+    },
+    "contracts": {
+      "RoadProofRegistry": {
+        "compiler": "0.8.37+commit.f401782d",
+        "abi_sha256": "321c3da3db83336cbd011b3a845e8db4f1dec6ff108210e1b8c18b78e20d3627",
+        "deployed_bytecode_bytes": 1422
+      },
+      "RoadProofAuthorization": {
+        "compiler": "0.8.37+commit.f401782d",
+        "abi_sha256": "bcc923a7c0512e525c102ad66da2eec7ab3cde40909b94b8f979004519e0cfc0",
+        "deployed_bytecode_bytes": 1455
+      }
+    },
+    "slither_json_sha256": "6e9c58272201b07dd1bad7ddabe7f111a478bb05ff6a0d0ed171fcb25b7b0bc3",
+    "slither_exit_code": 255,
+    "tests": {
+      "passed": 37,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "after": {
+    "solc": "0.8.38",
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "evm_version": "cancun",
+    "foundry_toml_sha256": "1345ca61e3f94ef9c273adf4be4f4ebb0e85454f11c18cd770ddcbc17ed826c2",
+    "source_sha256": {
+      "lib/openzeppelin-contracts/contracts/access/Ownable.sol": "38578bd71c0a909840e67202db527cc6b4e6b437e0f39f0c909da32c1e30cb81",
+      "lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol": "c75345d7b9feef17ae29f2a800ca2f65f8021cf80436a41d6ec00f57f5180f36",
+      "lib/openzeppelin-contracts/contracts/utils/Context.sol": "847fda5460fee70f56f4200f59b82ae622bb03c79c77e67af010e31b7e2cc5b6",
+      "src/IRoadProofAuthorization.sol": "3a57f92a2dd0a01e4806b0ea67ee22e283877379bd80d90ce16a81af885cb549",
+      "src/RoadProofAuthorization.sol": "ad1d7b8e5d8bc2130f0086ca9543889965c751d139c3300ba625783332097bb3",
+      "src/RoadProofRegistry.sol": "053c32f3f0885163a78a2f03901c2830027c5ff80c56eadc45e626ba9f1e9201"
+    },
+    "contracts": {
+      "RoadProofRegistry": {
+        "compiler": "0.8.38+commit.1835d247",
+        "abi_sha256": "77023a56e8a21bb87e88cbd57e58263810e7a4ea379a8b6678173ed518445839",
+        "deployed_bytecode_bytes": 1378
+      },
+      "RoadProofAuthorization": {
+        "compiler": "0.8.38+commit.1835d247",
+        "abi_sha256": "9ac0fd343ddecf1dbd0b1f84e79e1c65a782ec91f135efde3cb6117268db65ec",
+        "deployed_bytecode_bytes": 1455
+      }
+    },
+    "slither_json_sha256": "029c6b7c3796b8420fc1ab4147b71e886191ae9148cf1b0c0967f342e88dba6c",
+    "slither_exit_code": 255,
+    "tests": {
+      "passed": 38,
+      "failed": 0,
+      "skipped": 0
+    },
+    "forge_fmt_exit_code": 0,
+    "abi_hash_serialization": "UTF-8 JSON, sorted object keys, compact separators"
+  }
+}

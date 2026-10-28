@@ -44,9 +44,6 @@ contract RoadProofRegistry {
     /// @notice Information for each inspection, identified by its ID.
     mapping(bytes32 => Inspection) public inspections;
 
-    /// @notice Indicates whether an inspection has already been registered.
-    mapping(bytes32 => bool) public inspectionExists;
-
     // ---------------------------------------------------------------
     // CUSTOM ERRORS
     // ---------------------------------------------------------------
@@ -149,7 +146,7 @@ contract RoadProofRegistry {
             revert InvalidHash();
         }
 
-        if (inspectionExists[inspectionId]) {
+        if (inspectionExists(inspectionId)) {
             revert DuplicateInspection();
         }
 
@@ -161,8 +158,6 @@ contract RoadProofRegistry {
         }
 
         // Effects: store the inspection after validating the conditions.
-        inspectionExists[inspectionId] = true;
-
         inspections[inspectionId] = Inspection({
             reportHash: reportHash,
             vehicleRefHash: vehicleRefHash,
@@ -177,8 +172,16 @@ contract RoadProofRegistry {
     }
 
     // ---------------------------------------------------------------
-    // INTEGRITY VERIFICATION
+    // INSPECTION QUERIES
     // ---------------------------------------------------------------
+
+    /// @notice Indicates whether an inspection has already been registered.
+    /// @dev Registration rejects zero report hashes, so a nonzero stored hash proves existence.
+    /// @param inspectionId Unique inspection identifier.
+    /// @return True if the inspection has been registered.
+    function inspectionExists(bytes32 inspectionId) public view returns (bool) {
+        return inspections[inspectionId].reportHash != bytes32(0);
+    }
 
     /// @notice Checks whether a hash matches the registered report.
     /// @dev A match does not prove that the report is truthful;
@@ -188,7 +191,9 @@ contract RoadProofRegistry {
     /// @return intact True if the hash matches the registered hash.
 
     function verifyIntegrity(bytes32 inspectionId, bytes32 computedHash) external view returns (bool intact) {
-        if (!inspectionExists[inspectionId]) {
+        bytes32 storedReportHash = inspections[inspectionId].reportHash;
+
+        if (storedReportHash == bytes32(0)) {
             revert InspectionNotFound();
         }
 
@@ -196,6 +201,6 @@ contract RoadProofRegistry {
             revert InvalidHash();
         }
 
-        return inspections[inspectionId].reportHash == computedHash;
+        return storedReportHash == computedHash;
     }
 }
