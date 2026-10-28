@@ -1019,9 +1019,10 @@ Las pruebas actuales constituyen evidencia del comportamiento probado, pero no d
 Luego del hito de la entrega, se propone continuar con los siguientes pasos:
 
 1. **Piloto con talleres:** probar el flujo completo con un grupo reducido de usuarios en testnet y ajustar la interfaz según sus comentarios.
-2. **Mejoras de consulta:** ampliar el historial por patente existente con filtros por taller y fecha, evaluar un indexador y mejorar la experiencia móvil de la consulta con código QR.
-3. **Gestión de informes:** integrar almacenamiento externo con acceso controlado para recuperar los informes, calcular sus hashes y comprobar su integridad mediante `verifyIntegrity`.
-4. **Seguridad y escalamiento:** ampliar las pruebas de permisos y casos límite, realizar una revisión de seguridad antes de un uso real y medir el consumo de gas para evaluar una red EVM de menor costo para escalar el sistema.
+2. **Diseño y experiencia de usuario:** mejorar el frontend actual con una estética más cuidada, una navegación más clara y flujos de registro y consulta más fáciles de usar. Incorporar una interfaz móvil adaptada a celulares y tablets, incluida la consulta con código QR.
+3. **Mejoras de consulta:** ampliar el historial por patente existente con filtros por taller y fecha y evaluar un indexador.
+4. **Gestión de informes:** integrar almacenamiento externo con acceso controlado para recuperar los informes, calcular sus hashes y comprobar su integridad mediante `verifyIntegrity`.
+5. **Seguridad y escalamiento:** ampliar las pruebas de permisos y casos límite, realizar una revisión de seguridad antes de un uso real y medir el consumo de gas para evaluar una red EVM de menor costo para escalar el sistema.
 
 ## Referencias
 
