@@ -76,6 +76,7 @@ Cubren la convención de hashes (vectores keccak256 conocidos, normalización de
 - IDs de revisión y de taller: `keccak256` de los bytes UTF-8 del texto (igual que `keccak256("WORKSHOP-001")` en los scripts). Si se pega un `0x` + 64 hex, se usa tal cual.
 - Patente: se normaliza (mayúsculas, sin espacios ni guiones) y se aplica `keccak256`.
 - Informe: `keccak256` de los bytes exactos del archivo.
+- Informe omitido (opcional): se registra el marcador reservado `keccak256("RoadProof:no-report:v1")`, compatible con el contrato que exige un hash distinto de cero. La pantalla de verificación muestra que no se proporcionó un informe y no ofrece comparar archivos. Este marcador es una convención del frontend; el contrato no lo interpreta como ausencia de informe.
 
 ## Limitaciones del MVP
 - La búsqueda por patente y la fecha se leen de los logs. Si el RPC limita `getLogs`, se reintenta por tramos sobre los últimos ~500.000 bloques; usá un RPC sin límite de rango y configurá `VITE_DEPLOY_BLOCK`. Es válido para un MVP, pero no escala a muchos registros (el roadmap sería un indexador como The Graph o un evento con `vehicleRefHash` indexado).

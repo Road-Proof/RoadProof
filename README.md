@@ -928,7 +928,7 @@ La interfaz muestra el estado de conexión, las solicitudes de firma, la espera 
 
 1. En **Admin**, conectar la wallet propietaria y autorizar la dirección del director técnico para un taller.
 2. Conectar la wallet del director técnico y seleccionar la red configurada; la interfaz avisa si la red no coincide.
-3. En **Register inspection**, completar el taller, el identificador de revisión, la patente y el resultado, y seleccionar el informe. El navegador calcula el hash del archivo.
+3. En **Register inspection**, completar el taller, el identificador de revisión, la patente y el resultado. El informe es opcional: si se selecciona, el navegador calcula el hash del archivo; si se omite, registra el marcador reservado descrito en la convención de hashes del frontend.
 4. Firmar `registerInspection`. El contrato comprueba los permisos y registra los datos.
 5. Esperar la confirmación. La interfaz muestra un código QR con un enlace a **Verify** para esa revisión.
 6. En **Verify**, consultar el identificador o abrir el enlace del QR y seleccionar el informe para comparar su hash mediante `verifyIntegrity`.
