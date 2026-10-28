@@ -25,9 +25,8 @@ Los informes completos y los datos sensibles del vehículo no se almacenan direc
 13. [Configuración para Sepolia](#configuración-para-sepolia)
 14. [Integración con el frontend](#integración-con-el-frontend)
 15. [Seguridad y buenas prácticas](#seguridad-y-buenas-prácticas)
-16. [Estado del proyecto y tareas pendientes](#estado-del-proyecto-y-tareas-pendientes)
-17. [Roadmap](#roadmap)
-18. [Referencias](#referencias)
+16. [Roadmap](#roadmap)
+17. [Referencias](#referencias)
 
 ---
 
@@ -986,52 +985,15 @@ Antes de la entrega académica, revisar y documentar:
 
 Las pruebas actuales constituyen evidencia del comportamiento probado, pero no deben presentarse como una auditoría formal ni como garantía de ausencia de vulnerabilidades.
 
-## Estado del proyecto y tareas pendientes
-
-### Implementado y probado localmente
-
-- [x] Contrato de autorización de directores técnicos por taller.
-- [x] Interfaz de autorización utilizada por el registro.
-- [x] Contrato de registro de revisiones técnicas.
-- [x] Validación de autorización antes del registro.
-- [x] Registro de hashes y resultado de la revisión.
-- [x] Consulta de existencia de una revisión.
-- [x] Verificación de integridad del hash del informe.
-- [x] Despliegue local de ambos contratos mediante Foundry.
-- [x] Interacción entre los contratos mediante un script de Foundry.
-- [x] Prueba automatizada de rechazo de un director no autorizado.
-- [x] Ejecución manual en Anvil que demuestra el rechazo de una dirección no autorizada.
-- [x] Ejecución manual en Anvil que demuestra el registro exitoso de una dirección autorizada.
-- [x] Consulta posterior que confirma la existencia de la revisión registrada.
-- [x] Frontend implementado para administrar permisos, registrar revisiones, verificar informes, consultar por patente y generar enlaces QR.
-- [x] Análisis estático con Slither ejecutado y documentado, con todos los hallazgos clasificados y la versión del compilador corregida.
-
-### Desplegado y verificado en Sepolia
-
-- [x] Ambos contratos desplegados en Sepolia (Chain ID `11155111`).
-- [x] Código fuente de ambos contratos verificado, con [enlaces directos al código](#4-verificación-del-código-fuente) incluidos en este README.
-- [x] Direcciones de ambos contratos registradas en la [evidencia del despliegue](#5-evidencia-del-despliegue).
-- [x] Hashes y enlaces públicos de las dos transacciones de despliegue documentados.
-- [x] Autorización de `dt1`, registro de una revisión y consultas de existencia e integridad confirmados, con [evidencia del flujo principal](#6-transacciones-reales-del-flujo-principal).
-
-### Pendiente de completar
-
-- [ ] Consolidar y registrar el informe definitivo de cobertura.
-- [ ] Completar la revisión de NatSpec y calidad del código.
-- [ ] Revisar el conjunto completo de pruebas de autorización, revocación, integridad y duplicados.
-- [ ] Configurar el frontend con las direcciones del despliegue público y comprobar su funcionamiento en esa red.
-- [ ] Probar el flujo de extremo a extremo desde el frontend.
-- [ ] Incorporar evidencia reproducible para la entrega académica.
-
 ## Roadmap
 
 Luego del hito de la entrega, se propone continuar con los siguientes pasos:
 
-1. **Piloto con talleres:** probar el flujo completo con un grupo reducido de usuarios en testnet y ajustar la interfaz según sus comentarios.
-2. **Diseño y experiencia de usuario:** mejorar el frontend actual con una estética más cuidada, una navegación más clara y flujos de registro y consulta más fáciles de usar. Incorporar una interfaz móvil adaptada a celulares y tablets, incluida la consulta con código QR.
+1. **Diseño y experiencia de usuario:** mejorar el frontend actual con una estética más cuidada, una navegación más clara y flujos de registro y consulta más fáciles de usar. Incorporar una interfaz móvil adaptada a celulares y tablets, incluida la consulta con código QR.
+2. **Piloto con talleres:** probar el flujo completo con un grupo reducido de usuarios en testnet y ajustar la interfaz según sus comentarios.
 3. **Mejoras de consulta:** ampliar el historial por patente existente con filtros por taller y fecha y evaluar un indexador.
-4. **Gestión de informes:** integrar almacenamiento externo con acceso controlado para recuperar los informes, calcular sus hashes y comprobar su integridad mediante `verifyIntegrity`.
-5. **Seguridad y escalamiento:** ampliar las pruebas de permisos y casos límite, realizar una revisión de seguridad antes de un uso real y medir el consumo de gas para evaluar una red EVM de menor costo para escalar el sistema.
+4. **Gestión de informes:** integrar almacenamiento externo con acceso controlado para recuperar los informes, calcular sus hashes y comprobar su integridad.
+5. **Seguridad y escalamiento:** ampliar las pruebas de permisos y casos límite y medir el consumo de gas para evaluar una red EVM de menor costo para escalar el sistema.
 
 ## Referencias
 
