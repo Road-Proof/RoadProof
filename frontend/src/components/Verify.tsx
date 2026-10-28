@@ -4,7 +4,7 @@ import type { Address, Hex } from 'viem'
 import { TARGET } from '../wagmi'
 import { REGISTRY, RESULTS, registryAbi } from '../lib/contracts'
 import { fetchRegistered, type LogsClient } from '../lib/logs'
-import { toBytes32, plateToBytes32, fileToHash, short } from '../lib/hash'
+import { toBytes32, plateToBytes32, fileToHash, NO_REPORT_HASH, short } from '../lib/hash'
 import { describeError } from '../lib/errors'
 import { txUrl } from '../lib/ui'
 
@@ -47,7 +47,7 @@ export function Verify({ initialId }: { initialId: string }) {
   useEffect(() => { if (initialId) load(initialId) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function onFile(f?: File) {
-    if (!f || !client || !rec) return
+    if (!f || !client || !rec || rec.reportHash === NO_REPORT_HASH) return
     setFileName(f.name); setIntact(null); setMsg('')
     try {
       const computedHash = await fileToHash(f)
@@ -80,17 +80,23 @@ export function Verify({ initialId }: { initialId: string }) {
             <dt>Workshop (ID hash)</dt><dd><code>{short(rec.workshopId)}</code></dd>
             <dt>Registration date</dt>
             <dd>{rec.timestamp ? new Date(Number(rec.timestamp) * 1000).toLocaleString('en-US') : 'Not available'}</dd>
-            <dt>Report hash (on-chain)</dt><dd><code>{rec.reportHash}</code></dd>
+            <dt>Report hash (on-chain)</dt><dd>{rec.reportHash === NO_REPORT_HASH ? 'No report provided' : <code>{rec.reportHash}</code>}</dd>
             {rec.tx && <><dt>Transaction</dt><dd>{tx ? <a href={tx} target="_blank" rel="noreferrer">{short(rec.tx)}</a> : <code>{short(rec.tx)}</code>}</dd></>}
           </dl>
 
           <h3>Check report integrity</h3>
-          <p className="hint">Upload the original report. Its hash is computed locally (keccak256 of the file bytes) and compared with the registered one.</p>
-          <input type="file" onChange={(e) => onFile(e.target.files?.[0])} />
-          {intact === true && <p className="okmsg">✔ Intact: “{fileName}” matches the registered hash.</p>}
-          {intact === false && <p className="errmsg">✘ Mismatch: “{fileName}” was modified or is not the original report.</p>}
-          {msg && state === 'idle' && <p className="errmsg">{msg}</p>}
-          <p className="hint small">A match proves the file is the same one that was sealed; it does not prove the original inspection was truthful.</p>
+          {rec.reportHash === NO_REPORT_HASH ? (
+            <p className="hint">This inspection was registered without a report. File integrity verification is unavailable.</p>
+          ) : (
+            <>
+              <p className="hint">Upload the original report. Its hash is computed locally (keccak256 of the file bytes) and compared with the registered one.</p>
+              <input type="file" onChange={(e) => onFile(e.target.files?.[0])} />
+              {intact === true && <p className="okmsg">✔ Intact: “{fileName}” matches the registered hash.</p>}
+              {intact === false && <p className="errmsg">✘ Mismatch: “{fileName}” was modified or is not the original report.</p>}
+              {msg && state === 'idle' && <p className="errmsg">{msg}</p>}
+              <p className="hint small">A match proves the file is the same one that was sealed; it does not prove the original inspection was truthful.</p>
+            </>
+          )}
 
           <h3>Check vehicle (optional)</h3>
           <input value={plate} onChange={(e) => setPlate(e.target.value)} placeholder="License plate (e.g. AB123CD)" />

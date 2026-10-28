@@ -1,5 +1,8 @@
 import { keccak256, stringToHex, isHex, type Hex } from 'viem'
 
+/** Reserved frontend marker for an omitted report; the registry rejects zero hashes. */
+export const NO_REPORT_HASH = keccak256(stringToHex('RoadProof:no-report:v1'))
+
 /**
  * Project convention (same as `keccak256("TEXT")` in the Foundry scripts):
  * a text is converted to bytes32 with keccak256 of its UTF-8 bytes.

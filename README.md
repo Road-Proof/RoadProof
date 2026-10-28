@@ -44,13 +44,13 @@ El proyecto contempla los siguientes objetivos:
 - Almacenar hashes de la información relevante para verificar su integridad.
 - Emitir eventos que permitan identificar y seguir las operaciones realizadas.
 - Permitir la consulta de los registros y la verificación de sus hashes.
-- Proporcionar una base para una futura integración con una aplicación frontend.
+- Permitir la administración, el registro y la consulta mediante una aplicación frontend.
 
 ### Alcance de la primera implementación
 
-La implementación actual se concentra en los contratos inteligentes y en la validación de sus operaciones mediante Foundry y Anvil.
+La implementación actual incluye los contratos inteligentes, sus pruebas con Foundry y un frontend en React para administrar permisos, registrar revisiones y consultar su integridad.
 
-El despliegue público en Sepolia, la verificación del código fuente en un explorador y la integración con el frontend constituyen etapas posteriores.
+Ambos contratos están desplegados en Sepolia y tienen el código fuente verificado en Etherscan. Los enlaces directos se encuentran en la sección [Verificación del código fuente](#4-verificación-del-código-fuente). La autorización y el registro cuentan con [transacciones confirmadas](#6-transacciones-reales-del-flujo-principal); la validación documentada del flujo completo desde el frontend con una wallet sigue pendiente.
 
 ## Arquitectura
 
@@ -89,7 +89,7 @@ Valida la autorización del director técnico antes de registrar una revisión y
 
 **Frontend**
 
-Será el punto de interacción de los usuarios con los contratos desplegados. Su implementación e integración están pendientes.
+La aplicación en `frontend/` utiliza React, Vite y wagmi/viem para interactuar con ambos contratos. Incluye las pantallas **Verify**, **By plate**, **Register inspection** y **Admin**, además de un enlace de consulta con código QR. Su configuración y uso se describen en la [guía del frontend](frontend/README.md).
 
 **Almacenamiento externo**
 
@@ -121,6 +121,8 @@ Los hashes no permiten recuperar por sí solos el contenido original. Para verif
 | OpenZeppelin Contracts | Componentes reutilizables, incluido el control de propiedad. |
 | Ethereum / EVM | Entorno de ejecución de los contratos. |
 | Git y GitHub | Control de versiones y colaboración. |
+| React / Vite | Interfaz web y compilación del frontend. |
+| wagmi / viem | Conexión de wallets, consultas y transacciones desde el navegador. |
 
 ## Requisitos previos
 
@@ -129,6 +131,7 @@ Se necesita:
 - Linux, macOS o Windows con WSL2 y Ubuntu.
 - Git.
 - Foundry instalado.
+- Node.js 22 (22.12 o posterior) o 24, y npm para el frontend.
 - Acceso a una terminal.
 - Conexión a Internet para clonar el repositorio y descargar dependencias.
 
@@ -186,6 +189,11 @@ roadproof/
 ├── script/
 │   ├── DeployRoadProof.s.sol
 │   └── InteractRoadProof.s.sol
+├── frontend/
+│   ├── src/
+│   ├── .env.example
+│   ├── package.json
+│   └── README.md
 ├── lib/
 │   ├── forge-std/
 │   └── openzeppelin-contracts/
@@ -300,7 +308,7 @@ function registerInspection(
 
 **`inspectionExists(bytes32 inspectionId)`**
 
-Permite consultar si existe un registro para un identificador de revisión.
+Permite consultar si existe un registro para un identificador de revisión. La existencia se deriva de un `reportHash` almacenado distinto de cero, sin guardar un indicador adicional en storage.
 
 **`inspections(bytes32 inspectionId)`**
 
@@ -734,7 +742,7 @@ Estas comprobaciones validan el control de autorización y el registro en la ins
 
 ## Configuración para Sepolia
 
-El despliegue en Sepolia está previsto como siguiente etapa de desarrollo.
+Los contratos `RoadProofAuthorization` y `RoadProofRegistry` están desplegados en Sepolia y su código fuente está verificado en Etherscan.
 
 El procedimiento debe mantener la misma arquitectura del despliegue local, pero utilizar una red pública de pruebas y una configuración independiente.
 
@@ -751,107 +759,145 @@ Se necesita:
 
 ### 2. Configuración mediante variables de entorno
 
-Definir la URL RPC y la clave privada de despliegue en el entorno local:
+Si todavía no existe `.env`, copiar la plantilla desde la raíz del repositorio:
 
 ```bash
-export SEPOLIA_RPC_URL="YOUR_SEPOLIA_RPC_URL"
-export SEPOLIA_PRIVATE_KEY="<SEPOLIA_TESTNET_PRIVATE_KEY>"
+cp -n .env.example .env
 ```
 
-Los valores anteriores son marcadores de posición y deben reemplazarse localmente.
+La plantilla define `SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com`, un RPC público sin API key. Se puede reemplazar por otro proveedor en `.env` si el servicio limita las solicitudes. Si `.env` ya existe, agregar o actualizar únicamente `SEPOLIA_RPC_URL`.
 
-No incorporar claves privadas, frases semilla ni tokens de proveedor RPC en el repositorio.
+Foundry carga `.env` automáticamente. El alias `sepolia` en `foundry.toml` resuelve esa variable; no es necesario exportarla en la terminal. Una variable ya exportada en el shell tiene prioridad sobre `.env`.
+
+Importar la cuenta de despliegue en el keystore cifrado de Foundry, si todavía no está importada:
+
+```bash
+cast wallet import roadproof-sepolia --interactive
+```
+
+Ingresar la clave privada únicamente en el prompt local. La cuenta debe tener ETH de prueba de Sepolia. No incorporar claves privadas ni frases semilla al repositorio.
 
 ### 3. Desplegar en Sepolia
 
-Una vez configuradas las variables y verificado que la cuenta dispone de ETH de prueba:
+Comprobar que el RPC devuelve el Chain ID `11155111` y simular el despliegue:
 
 ```bash
-forge create src/RoadProofAuthorization.sol:RoadProofAuthorization \
-  --rpc-url "$SEPOLIA_RPC_URL" \
-  --broadcast \
-  --private-key "$SEPOLIA_PRIVATE_KEY"
+cast chain-id --rpc-url sepolia
+
+forge script script/DeployRoadProof.s.sol:DeployRoadProof \
+  --rpc-url sepolia \
+  --account roadproof-sepolia
 ```
 
-Guardar la dirección indicada en `Deployed to` y utilizarla para desplegar el registro:
+Para enviar las dos transacciones:
 
 ```bash
-export SEPOLIA_AUTHORIZATION_ADDRESS="<SEPOLIA_AUTHORIZATION_CONTRACT_ADDRESS>"
-
-forge create src/RoadProofRegistry.sol:RoadProofRegistry \
-  --rpc-url "$SEPOLIA_RPC_URL" \
-  --broadcast \
-  --private-key "$SEPOLIA_PRIVATE_KEY" \
-  --constructor-args "$SEPOLIA_AUTHORIZATION_ADDRESS"
+forge script script/DeployRoadProof.s.sol:DeployRoadProof \
+  --rpc-url sepolia \
+  --account roadproof-sepolia \
+  --broadcast
 ```
 
-Antes de considerar finalizado el despliegue, comprobar:
-
-- Que las dos transacciones de despliegue se hayan confirmado.
-- Que se hayan registrado las direcciones de ambos contratos.
-- Que `RoadProofRegistry` apunte a la dirección correcta de `RoadProofAuthorization`.
-- Que las direcciones correspondan a la cadena Sepolia.
-- Que las transacciones puedan consultarse en el explorador de la red.
+El script despliega primero `RoadProofAuthorization` y luego `RoadProofRegistry`, pasando la dirección del primero al constructor del segundo. La cuenta seleccionada es la administradora. La salida muestra ambas direcciones y la administradora; guardar las direcciones y los hashes de las transacciones confirmadas. Una nueva ejecución completa despliega un par nuevo de contratos.
 
 ### 4. Verificación del código fuente
 
-Después del despliegue, verificar el código fuente de ambos contratos en el explorador compatible.
+- [x] Todos los Smart Contracts desplegados están verificados y en el README se incluye la URL directa donde puede verse el código verificado de cada contrato, independientemente del explorer utilizado.
+
+Los siguientes enlaces abren directamente la pestaña **Contract / Code** de cada contrato verificado en Sepolia:
+
+| Contrato | Código fuente verificado |
+|---|---|
+| `RoadProofAuthorization` | [Ver código verificado en Etherscan](https://sepolia.etherscan.io/address/0xdf64905F42EC1D7C98bb1535e0B878A2DC334275#code) |
+| `RoadProofRegistry` | [Ver código verificado en Etherscan](https://sepolia.etherscan.io/address/0xa04336222cBeE5C98E50e964A6C6b0F96AFdd4A5#code) |
 
 La verificación debe utilizar la misma versión del compilador y configuración relevante que se emplearon para compilar el contrato desplegado.
 
 También deben documentarse los argumentos del constructor y las direcciones de las dependencias utilizadas.
 
-### 5. Registrar la evidencia del despliegue
+### 5. Evidencia del despliegue
 
-Completar la siguiente información una vez realizado el despliegue:
+Direcciones y transacciones de los contratos desplegados en Sepolia. Ambos recibos de despliegue confirman `status = 1` y las direcciones indicadas:
 
 | Dato | Valor |
 |---|---|
 | Red | Sepolia |
 | Chain ID | 11155111 |
-| Dirección de `RoadProofAuthorization` | Pendiente |
-| Dirección de `RoadProofRegistry` | Pendiente |
-| Transacción de despliegue de autorización | Pendiente |
-| Transacción de despliegue del registro | Pendiente |
-| Enlace al contrato verificado de autorización | Pendiente |
-| Enlace al contrato verificado del registro | Pendiente |
-| Cuenta administradora | Pendiente |
+| Dirección de `RoadProofAuthorization` | `0xdf64905F42EC1D7C98bb1535e0B878A2DC334275` |
+| Dirección de `RoadProofRegistry` | `0xa04336222cBeE5C98E50e964A6C6b0F96AFdd4A5` |
+| Transacción de despliegue de autorización | [0x9e2c65954bcbe0fbd059e4d0d12058a189ed06685109849b157258116224c286](https://sepolia.etherscan.io/tx/0x9e2c65954bcbe0fbd059e4d0d12058a189ed06685109849b157258116224c286), bloque `12009270` |
+| Transacción de despliegue del registro | [0xe4475e4bc2643aefeb74cc243946a8a931e31a9197f14927b6ed8e75a69675b8](https://sepolia.etherscan.io/tx/0xe4475e4bc2643aefeb74cc243946a8a931e31a9197f14927b6ed8e75a69675b8), bloque `12009271` |
+| Enlace al contrato verificado de autorización | [RoadProofAuthorization — código verificado](https://sepolia.etherscan.io/address/0xdf64905F42EC1D7C98bb1535e0B878A2DC334275#code) |
+| Enlace al contrato verificado del registro | [RoadProofRegistry — código verificado](https://sepolia.etherscan.io/address/0xa04336222cBeE5C98E50e964A6C6b0F96AFdd4A5#code) |
+| Cuenta administradora del despliegue | `0x34b769107733F15a809dc736DD187538721ef629` |
 
-Los enlaces deben incorporarse únicamente después de confirmar las direcciones y transacciones reales.
+### 6. Transacciones reales del flujo principal
 
-### 6. Pruebas posteriores al despliegue
+El flujo de demostración utiliza datos sintéticos y dos cuentas: `cnrt`, administradora (`0x34b769107733F15a809dc736DD187538721ef629`), y `dt1`, director técnico (`0xBEe694a1E062C29070666D62BF9c6bCdF3342290`). Las siguientes transacciones fueron minadas en Sepolia y verificadas el 27 de octubre de 2026 (America/Denver) mediante sus recibos, remitentes, destinos, datos de llamada y eventos:
 
-Una vez desplegados los contratos en Sepolia, repetir al menos las siguientes comprobaciones:
+| Operación | Firmante | Bloque | Resultado | Hash y enlace público |
+|---|---|---|---|---|
+| `authorizeTechnicalDirector`: autorizar a `dt1` para el taller de demostración | `cnrt` | `12009518` | `status = 1`; evento `TechnicalDirectorAuthorized` | [0x22dcd5454a510c9b4959b9d6427468af4b1a79c7f8ae13707352c9839a0b7fb0](https://sepolia.etherscan.io/tx/0x22dcd5454a510c9b4959b9d6427468af4b1a79c7f8ae13707352c9839a0b7fb0) |
+| `registerInspection`: registrar la revisión con resultado `PASS` | `dt1` | `12009570` | `status = 1`; evento `InspectionRegistered` | [0x1cbe139df589b42c7f9d6134f50e5dcad94d5fc2042799d9b19a406207198695](https://sepolia.etherscan.io/tx/0x1cbe139df589b42c7f9d6134f50e5dcad94d5fc2042799d9b19a406207198695) |
 
-- Consultar la autorización de un DT para un taller.
-- Autorizar un DT mediante la cuenta administradora.
-- Registrar una revisión con la cuenta autorizada.
-- Intentar registrar una revisión con una cuenta no autorizada.
-- Consultar la existencia de la revisión.
-- Verificar la integridad del hash del informe.
-- Consultar los eventos emitidos.
-- Registrar los hashes de las transacciones y sus enlaces públicos.
+Los identificadores coinciden con los utilizados en las simulaciones de los scripts de demostración:
 
-El resultado de estas pruebas debe documentarse por separado de las pruebas locales.
+| Dato | Valor |
+|---|---|
+| Taller | `ROADPROOF-DEMO-WORKSHOP-001` |
+| `workshopId` | `0x1c95af0326514d4850463074c43316b658d2a961aae1d816d4f0590f94468215` |
+| Revisión | `ROADPROOF-SEPOLIA-DT1-INSPECTION-001` |
+| `inspectionId` | `0x49d1da98ecbac97d69df79639fac066734247a7d510b63ed90ed591983e54e8b` |
+| `reportHash` | `0x87c383e0ccea9a9be80d77f9d667aafc1496f32866ba01047c4bd2ce2f2a6be6` |
+
+La consulta RPC posterior confirmó `isAuthorized(workshopId, dt1) = true`, `inspectionExists(inspectionId) = true` y `verifyIntegrity(inspectionId, reportHash) = true`. El registro almacenado también coincide con el taller, el director y el resultado `PASS`. Estas consultas son funciones `view`: no generan una transacción minada ni un hash propio.
+
+Esta evidencia acredita la autorización y el registro del ejemplo en la red pública de pruebas. La validación completa desde el frontend con una wallet, y la evidencia pública de casos adicionales como revocación y rechazo de cuentas no autorizadas, siguen pendientes.
 
 ## Integración con el frontend
 
-La integración con el frontend permitirá que los usuarios interactúen con los contratos sin tener que utilizar comandos de terminal.
+El frontend implementado en `frontend/` permite interactuar con los contratos mediante una wallet del navegador o WalletConnect. Las consultas de **Verify** y **By plate** no requieren conectar una wallet.
 
-La integración deberá realizarse contra las direcciones de los contratos desplegados en la red seleccionada.
+Antes de utilizarlo, desplegar ambos contratos y configurar sus direcciones en la red seleccionada. La [guía del frontend](frontend/README.md) detalla las pantallas, la configuración, los tests y las limitaciones.
 
-### 1. Información que necesita el frontend
+### 1. Instalación y configuración
 
-El frontend deberá disponer de:
+Desde la raíz del repositorio:
 
-- Red de destino y Chain ID.
-- Dirección de `RoadProofAuthorization`.
-- Dirección de `RoadProofRegistry`.
-- ABI de los contratos.
-- Cuenta del usuario conectado.
-- Identificadores y hashes necesarios para cada operación.
+```bash
+cd frontend
+cp .env.example .env.local
+npm ci
+```
 
-Las direcciones de Anvil no deben utilizarse como direcciones de Sepolia.
+Editar `frontend/.env.local` antes de iniciar la aplicación:
+
+| Variable | Configuración |
+|---|---|
+| `VITE_CHAIN` | `anvil` para la red local o `sepolia` para la testnet. |
+| `VITE_AUTHORIZATION_ADDRESS` | Dirección de `RoadProofAuthorization` en esa red. |
+| `VITE_REGISTRY_ADDRESS` | Dirección de `RoadProofRegistry` en esa red. |
+| `VITE_SEPOLIA_RPC_URL` | RPC de Sepolia; si se omite, se utiliza el predeterminado de la cadena. |
+| `VITE_WALLETCONNECT_PROJECT_ID` | Opcional; habilita WalletConnect. |
+| `VITE_DEPLOY_BLOCK` | Bloque de despliegue del registro; permite acotar la búsqueda de eventos. |
+
+Para Anvil, seguir el [despliegue local](#despliegue-local-con-anvil), mantener el nodo activo en `http://127.0.0.1:8545` y seleccionar la cadena `31337` en la wallet. Las direcciones de Anvil no deben utilizarse como direcciones de Sepolia, cuyo Chain ID es `11155111`. Las variables `VITE_*` son configuración pública del navegador; las claves privadas permanecen en la wallet.
+
+Desde `frontend/`, iniciar la aplicación:
+
+```bash
+npm run dev
+```
+
+Abrir la URL que imprime Vite, normalmente `http://localhost:5173`. Reiniciar Vite después de cambiar `.env.local`. Para ejecutar los tests y generar la versión de producción, también desde `frontend/`:
+
+```bash
+npm test
+npm run build
+npm run preview
+```
+
+La compilación genera `frontend/dist/`. `npm run preview` permite revisar esa compilación localmente.
 
 ### 2. Lecturas y transacciones
 
@@ -876,27 +922,35 @@ Las siguientes operaciones modifican el estado de la blockchain:
 
 La autorización y revocación deben ejecutarse con la cuenta administradora. El registro de una revisión debe firmarse con la cuenta del director técnico autorizado.
 
-El frontend debe contemplar estados de conexión, firma pendiente, transacción enviada, confirmación, rechazo por el usuario y errores de ejecución.
+La interfaz muestra el estado de conexión, las solicitudes de firma, la espera de confirmación y los errores de las transacciones.
 
-### 3. Flujo propuesto para el registro
+### 3. Flujo de uso
 
-1. El usuario conecta su billetera.
-2. El frontend comprueba que la red seleccionada sea la esperada.
-3. Se preparan los identificadores y hashes de la revisión.
-4. Se envía la transacción a `RoadProofRegistry`.
-5. El contrato valida la autorización del director técnico.
-6. Si la transacción se confirma, el frontend informa el resultado y conserva el hash de la transacción.
-7. El usuario puede consultar la revisión y verificar la integridad del informe.
+1. En **Admin**, conectar la wallet propietaria y autorizar la dirección del director técnico para un taller.
+2. Conectar la wallet del director técnico y seleccionar la red configurada; la interfaz avisa si la red no coincide.
+3. En **Register inspection**, completar el taller, el identificador de revisión, la patente y el resultado. El informe es opcional: si se selecciona, el navegador calcula el hash del archivo; si se omite, registra el marcador reservado descrito en la convención de hashes del frontend.
+4. Firmar `registerInspection`. El contrato comprueba los permisos y registra los datos.
+5. Esperar la confirmación. La interfaz muestra un código QR con un enlace a **Verify** para esa revisión.
+6. En **Verify**, consultar el identificador o abrir el enlace del QR y seleccionar el informe para comparar su hash mediante `verifyIntegrity`.
+7. En **By plate**, consultar las revisiones asociadas a una patente a partir de los eventos del registro.
 
 ### 4. Consideraciones de integración
 
 - El frontend no debe asumir que una transacción fue exitosa antes de recibir la confirmación correspondiente.
 - Las validaciones del frontend mejoran la experiencia de usuario, pero no reemplazan las validaciones de los contratos.
 - Los informes completos no deben almacenarse en eventos públicos ni publicarse en la blockchain si contienen información sensible.
-- Debe definirse el procedimiento para generar y reproducir los hashes del informe.
+- La [convención de hashes](frontend/README.md#convención-de-hashes-debe-ser-idéntica-al-registrar-y-al-verificar) está implementada en el frontend: el informe se identifica por el hash de sus bytes exactos.
 - Las direcciones de los contratos y la configuración de red deben estar separadas por entorno.
 
-La integración de extremo a extremo todavía debe completarse y documentarse con evidencia.
+La implementación de la interfaz está disponible; la validación de extremo a extremo con una wallet y los contratos desplegados todavía debe documentarse con evidencia.
+
+### 5. Limitaciones conocidas del frontend
+
+- El historial y la fecha de registro dependen de los eventos y de los límites del RPC. Si falla la consulta completa, el frontend reintenta por tramos sobre aproximadamente los últimos 500.000 bloques; pueden quedar registros anteriores fuera del resultado.
+- El historial por patente se filtra en el navegador, sin un indexador dedicado. `VITE_DEPLOY_BLOCK` ayuda a reducir el rango de consulta.
+- Los informes no se suben ni se recuperan desde un servicio de almacenamiento: el usuario selecciona el archivo local para calcular su hash.
+- Un QR generado con una URL de `localhost` requiere que el dispositivo que lo abra pueda acceder a la aplicación; no constituye una publicación del frontend.
+- Los tests actuales cubren utilidades de hashes, errores y eventos; todavía no hay pruebas de componentes ni de extremo a extremo con una wallet real.
 
 ## Seguridad y buenas prácticas
 
@@ -912,14 +966,18 @@ Durante el desarrollo se aplican o se contemplan las siguientes medidas:
 - Separación entre informes externos y sus hashes en la blockchain.
 - Pruebas de caminos exitosos y de errores esperados.
 
+### Análisis estático con Slither
+
+El 27 de octubre de 2026 se analizaron `RoadProofRegistry`, `RoadProofAuthorization` y sus dependencias con Slither 0.11.6 y sus 102 detectores predeterminados. Los cuatro hallazgos restantes están clasificados y justificados; no hay hallazgos de esta revisión pendientes de corrección.
+
+La revisión del compilador motivó la actualización de Solidity 0.8.37 a 0.8.38 para corregir `SOL-2026-7`. La ejecución final conserva las firmas públicas y pasa las 38 pruebas y la comprobación de formato. El [informe de Slither](security/slither/README.md) contiene la checklist completada, las justificaciones técnicas, los reportes antes y después y los comandos para reproducir el análisis.
+
 ### Aspectos pendientes de revisión
 
 Antes de la entrega académica, revisar y documentar:
 
 - Cobertura definitiva de líneas, instrucciones, ramas y funciones.
 - Calidad y completitud de la documentación NatSpec.
-- Resultados del análisis estático con Slither.
-- Advertencias y hallazgos relevantes.
 - Consumo de gas y uso del almacenamiento.
 - Comportamiento ante revocación de autorización.
 - Comportamiento de las funciones administrativas ante usuarios no autorizados.
@@ -945,17 +1003,23 @@ Las pruebas actuales constituyen evidencia del comportamiento probado, pero no d
 - [x] Ejecución manual en Anvil que demuestra el rechazo de una dirección no autorizada.
 - [x] Ejecución manual en Anvil que demuestra el registro exitoso de una dirección autorizada.
 - [x] Consulta posterior que confirma la existencia de la revisión registrada.
+- [x] Frontend implementado para administrar permisos, registrar revisiones, verificar informes, consultar por patente y generar enlaces QR.
+- [x] Análisis estático con Slither ejecutado y documentado, con todos los hallazgos clasificados y la versión del compilador corregida.
+
+### Desplegado y verificado en Sepolia
+
+- [x] Ambos contratos desplegados en Sepolia (Chain ID `11155111`).
+- [x] Código fuente de ambos contratos verificado, con [enlaces directos al código](#4-verificación-del-código-fuente) incluidos en este README.
+- [x] Direcciones de ambos contratos registradas en la [evidencia del despliegue](#5-evidencia-del-despliegue).
+- [x] Hashes y enlaces públicos de las dos transacciones de despliegue documentados.
+- [x] Autorización de `dt1`, registro de una revisión y consultas de existencia e integridad confirmados, con [evidencia del flujo principal](#6-transacciones-reales-del-flujo-principal).
 
 ### Pendiente de completar
 
 - [ ] Consolidar y registrar el informe definitivo de cobertura.
 - [ ] Completar la revisión de NatSpec y calidad del código.
-- [ ] Ejecutar y documentar el análisis estático con Slither.
 - [ ] Revisar el conjunto completo de pruebas de autorización, revocación, integridad y duplicados.
-- [ ] Desplegar ambos contratos en Sepolia.
-- [ ] Verificar el código fuente de ambos contratos en el explorador.
-- [ ] Registrar direcciones y hashes de transacciones públicas.
-- [ ] Integrar el frontend con los contratos desplegados.
+- [ ] Configurar el frontend con las direcciones del despliegue público y comprobar su funcionamiento en esa red.
 - [ ] Probar el flujo de extremo a extremo desde el frontend.
 - [ ] Incorporar evidencia reproducible para la entrega académica.
 
@@ -964,9 +1028,10 @@ Las pruebas actuales constituyen evidencia del comportamiento probado, pero no d
 Luego del hito de la entrega, se propone continuar con los siguientes pasos:
 
 1. **Piloto con talleres:** probar el flujo completo con un grupo reducido de usuarios en testnet y ajustar la interfaz según sus comentarios.
-2. **Mejoras de consulta:** incorporar un historial de revisiones por referencia de vehículo, filtros por taller y fecha y una opción de consulta con código QR en el frontend y/o interfaz mobile.
-3. **Gestión de informes:** integrar almacenamiento externo con acceso controlado para recuperar los informes, calcular sus hashes y comprobar su integridad mediante `verifyIntegrity`.
-4. **Seguridad y escalamiento:** ampliar las pruebas de permisos y casos límite, realizar una revisión de seguridad antes de un uso real y medir el consumo de gas para evaluar una red EVM de menor costo para escalar el sistema.
+2. **Diseño y experiencia de usuario:** mejorar el frontend actual con una estética más cuidada, una navegación más clara y flujos de registro y consulta más fáciles de usar. Incorporar una interfaz móvil adaptada a celulares y tablets, incluida la consulta con código QR.
+3. **Mejoras de consulta:** ampliar el historial por patente existente con filtros por taller y fecha y evaluar un indexador.
+4. **Gestión de informes:** integrar almacenamiento externo con acceso controlado para recuperar los informes, calcular sus hashes y comprobar su integridad mediante `verifyIntegrity`.
+5. **Seguridad y escalamiento:** ampliar las pruebas de permisos y casos límite, realizar una revisión de seguridad antes de un uso real y medir el consumo de gas para evaluar una red EVM de menor costo para escalar el sistema.
 
 ## Referencias
 

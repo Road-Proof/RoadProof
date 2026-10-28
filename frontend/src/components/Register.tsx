@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
 import { QRCodeSVG } from 'qrcode.react'
 import type { Hex } from 'viem'
 import { TARGET } from '../wagmi'
 import { AUTHORIZATION, REGISTRY, RESULTS, authorizationAbi, registryAbi } from '../lib/contracts'
-import { fileToHash, plateToBytes32, short, toBytes32 } from '../lib/hash'
+import { fileToHash, NO_REPORT_HASH, plateToBytes32, short, toBytes32 } from '../lib/hash'
 import { TxStatus } from '../lib/ui'
 
 /** Technical Director screen: registers an inspection by signing with their wallet. */
@@ -16,6 +16,10 @@ export function Register({ wrongChain }: { wrongChain: boolean }) {
   const [result, setResult] = useState<number>(0)
   const [reportHash, setReportHash] = useState<Hex>()
   const [fileName, setFileName] = useState('')
+  const [hashing, setHashing] = useState(false)
+  const [fileError, setFileError] = useState('')
+  const fileInput = useRef<HTMLInputElement>(null)
+  const fileRequest = useRef(0)
 
   const { data: authorized } = useReadContract({
     address: AUTHORIZATION, abi: authorizationAbi, functionName: 'isAuthorized',
@@ -25,15 +29,37 @@ export function Register({ wrongChain }: { wrongChain: boolean }) {
   const { writeContractAsync, data: hash, isPending, error, reset } = useWriteContract()
   const { isLoading: confirming, isSuccess } = useWaitForTransactionReceipt({ hash, chainId: TARGET.id })
 
-  const ready = isConnected && !wrongChain && workshop.trim() && idText.trim() && plate.trim() && reportHash
+  const ready = isConnected && !wrongChain && workshop.trim() && idText.trim() && plate.trim() && !hashing && !fileError
+
+  async function selectReport(file?: File) {
+    const request = ++fileRequest.current
+    setReportHash(undefined)
+    setFileName(file?.name ?? '')
+    setFileError('')
+    setHashing(!!file)
+    if (!file) return
+    try {
+      const computedHash = await fileToHash(file)
+      if (request === fileRequest.current) setReportHash(computedHash)
+    } catch {
+      if (request === fileRequest.current) setFileError('Could not read the report. Choose the file again or remove it to continue without a report.')
+    } finally {
+      if (request === fileRequest.current) setHashing(false)
+    }
+  }
+
+  function clearReport() {
+    if (fileInput.current) fileInput.current.value = ''
+    void selectReport()
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!reportHash) return
+    if (!ready || isPending || confirming) return
     try {
       await writeContractAsync({
         address: REGISTRY, abi: registryAbi, functionName: 'registerInspection', chainId: TARGET.id,
-        args: [toBytes32(idText), reportHash, plateToBytes32(plate), toBytes32(workshop), result],
+        args: [toBytes32(idText), reportHash ?? NO_REPORT_HASH, plateToBytes32(plate), toBytes32(workshop), result],
       })
     } catch { /* the error is shown from the hook */ }
   }
@@ -64,16 +90,19 @@ export function Register({ wrongChain }: { wrongChain: boolean }) {
           <input value={plate} onChange={(e) => setPlate(e.target.value)} placeholder="AB123CD" />
         </label>
         <label>Result
-          <select value={result} onChange={(e) => setResult(Number(e.target.value))}>
-            {RESULTS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-          </select>
+          <span className="select-field">
+            <select value={result} onChange={(e) => setResult(Number(e.target.value))}>
+              {RESULTS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+          </span>
         </label>
-        <label>Inspection report (file)
-          <input type="file" onChange={async (e) => {
-            const f = e.target.files?.[0]
-            setReportHash(f ? await fileToHash(f) : undefined); setFileName(f?.name ?? '')
-          }} />
+        <label>Inspection report (optional)
+          <input ref={fileInput} type="file" aria-describedby="report-help" onChange={(e) => void selectReport(e.target.files?.[0])} />
         </label>
+        <p id="report-help" className="hint small">You can register without a report. File integrity verification is only available when a report is selected.</p>
+        {fileName && <button type="button" className="ghost" onClick={clearReport}>Remove report</button>}
+        {hashing && <p className="info" role="status">Computing report hash…</p>}
+        {fileError && <p className="errmsg" role="alert">{fileError}</p>}
         {reportHash && <p className="small">Hash of “{fileName}”: <code>{reportHash}</code></p>}
 
         <button disabled={!ready || isPending || confirming}>Sign and register</button>
@@ -87,7 +116,7 @@ export function Register({ wrongChain }: { wrongChain: boolean }) {
           <div>
             <p>Inspection registered. This QR code leads to the verification screen:</p>
             <p className="small"><a href={link}>{link}</a></p>
-            <button className="ghost" onClick={() => { reset(); setIdText(''); setReportHash(undefined); setFileName('') }}>Register another</button>
+            <button className="ghost" onClick={() => { reset(); setIdText(''); clearReport() }}>Register another</button>
           </div>
         </div>
       )}

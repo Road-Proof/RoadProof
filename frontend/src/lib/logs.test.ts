@@ -2,6 +2,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { fetchRegistered, findByPlate, type LogsClient } from './logs'
 import { plateToBytes32, toBytes32 } from './hash'
 
+// Keep the fixture's block range independent of local deployment settings.
+vi.mock('./contracts', async (importOriginal) => ({
+  ...await importOriginal<typeof import('./contracts')>(),
+  DEPLOY_BLOCK: 0n,
+}))
+
 const log = (id: string, plate: string, timestamp: bigint) => ({
   args: {
     inspectionId: toBytes32(id), workshopId: toBytes32('W'), vehicleRefHash: plateToBytes32(plate),
