@@ -50,7 +50,7 @@ El proyecto contempla los siguientes objetivos:
 
 La implementación actual incluye los contratos inteligentes, sus pruebas con Foundry y un frontend en React para administrar permisos, registrar revisiones y consultar su integridad.
 
-El despliegue público en Sepolia, la verificación del código fuente en un explorador y la validación documentada del flujo completo con una wallet siguen pendientes.
+Ambos contratos están desplegados en Sepolia y tienen el código fuente verificado en Etherscan. Los enlaces directos se encuentran en la sección [Verificación del código fuente](#4-verificación-del-código-fuente). La validación documentada del flujo completo con una wallet sigue pendiente.
 
 ## Arquitectura
 
@@ -742,7 +742,7 @@ Estas comprobaciones validan el control de autorización y el registro en la ins
 
 ## Configuración para Sepolia
 
-El despliegue en Sepolia está previsto como siguiente etapa de desarrollo.
+Los contratos `RoadProofAuthorization` y `RoadProofRegistry` están desplegados en Sepolia y su código fuente está verificado en Etherscan.
 
 El procedimiento debe mantener la misma arquitectura del despliegue local, pero utilizar una red pública de pruebas y una configuración independiente.
 
@@ -802,33 +802,38 @@ El script despliega primero `RoadProofAuthorization` y luego `RoadProofRegistry`
 
 ### 4. Verificación del código fuente
 
-Después del despliegue, verificar el código fuente de ambos contratos en el explorador compatible.
+- [x] Todos los Smart Contracts desplegados están verificados y en el README se incluye la URL directa donde puede verse el código verificado de cada contrato, independientemente del explorer utilizado.
+
+Los siguientes enlaces abren directamente la pestaña **Contract / Code** de cada contrato verificado en Sepolia:
+
+| Contrato | Código fuente verificado |
+|---|---|
+| `RoadProofAuthorization` | [Ver código verificado en Etherscan](https://sepolia.etherscan.io/address/0xdf64905F42EC1D7C98bb1535e0B878A2DC334275#code) |
+| `RoadProofRegistry` | [Ver código verificado en Etherscan](https://sepolia.etherscan.io/address/0xa04336222cBeE5C98E50e964A6C6b0F96AFdd4A5#code) |
 
 La verificación debe utilizar la misma versión del compilador y configuración relevante que se emplearon para compilar el contrato desplegado.
 
 También deben documentarse los argumentos del constructor y las direcciones de las dependencias utilizadas.
 
-### 5. Registrar la evidencia del despliegue
+### 5. Evidencia del despliegue
 
-Completar la siguiente información una vez realizado el despliegue:
+Direcciones y enlaces de los contratos desplegados; queda pendiente incorporar los hashes de las transacciones de despliegue:
 
 | Dato | Valor |
 |---|---|
 | Red | Sepolia |
 | Chain ID | 11155111 |
-| Dirección de `RoadProofAuthorization` | Pendiente |
-| Dirección de `RoadProofRegistry` | Pendiente |
+| Dirección de `RoadProofAuthorization` | `0xdf64905F42EC1D7C98bb1535e0B878A2DC334275` |
+| Dirección de `RoadProofRegistry` | `0xa04336222cBeE5C98E50e964A6C6b0F96AFdd4A5` |
 | Transacción de despliegue de autorización | Pendiente |
 | Transacción de despliegue del registro | Pendiente |
-| Enlace al contrato verificado de autorización | Pendiente |
-| Enlace al contrato verificado del registro | Pendiente |
-| Cuenta administradora | Pendiente |
-
-Los enlaces deben incorporarse únicamente después de confirmar las direcciones y transacciones reales.
+| Enlace al contrato verificado de autorización | [RoadProofAuthorization — código verificado](https://sepolia.etherscan.io/address/0xdf64905F42EC1D7C98bb1535e0B878A2DC334275#code) |
+| Enlace al contrato verificado del registro | [RoadProofRegistry — código verificado](https://sepolia.etherscan.io/address/0xa04336222cBeE5C98E50e964A6C6b0F96AFdd4A5#code) |
+| Cuenta administradora del despliegue | `0x34b769107733F15a809dc736DD187538721ef629` |
 
 ### 6. Pruebas posteriores al despliegue
 
-Una vez desplegados los contratos en Sepolia, repetir al menos las siguientes comprobaciones:
+Con los contratos desplegados en Sepolia, repetir y documentar al menos las siguientes comprobaciones:
 
 - Consultar la autorización de un DT para un taller.
 - Autorizar un DT mediante la cuenta administradora.
@@ -993,14 +998,18 @@ Las pruebas actuales constituyen evidencia del comportamiento probado, pero no d
 - [x] Frontend implementado para administrar permisos, registrar revisiones, verificar informes, consultar por patente y generar enlaces QR.
 - [x] Análisis estático con Slither ejecutado y documentado, con todos los hallazgos clasificados y la versión del compilador corregida.
 
+### Desplegado y verificado en Sepolia
+
+- [x] Ambos contratos desplegados en Sepolia (Chain ID `11155111`).
+- [x] Código fuente de ambos contratos verificado, con [enlaces directos al código](#4-verificación-del-código-fuente) incluidos en este README.
+- [x] Direcciones de ambos contratos registradas en la [evidencia del despliegue](#5-evidencia-del-despliegue).
+
 ### Pendiente de completar
 
 - [ ] Consolidar y registrar el informe definitivo de cobertura.
 - [ ] Completar la revisión de NatSpec y calidad del código.
 - [ ] Revisar el conjunto completo de pruebas de autorización, revocación, integridad y duplicados.
-- [ ] Desplegar ambos contratos en Sepolia.
-- [ ] Verificar el código fuente de ambos contratos en el explorador.
-- [ ] Registrar direcciones y hashes de transacciones públicas.
+- [ ] Registrar los hashes de las transacciones públicas de despliegue.
 - [ ] Configurar el frontend con las direcciones del despliegue público y comprobar su funcionamiento en esa red.
 - [ ] Probar el flujo de extremo a extremo desde el frontend.
 - [ ] Incorporar evidencia reproducible para la entrega académica.
