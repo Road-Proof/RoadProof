@@ -50,7 +50,7 @@ El proyecto contempla los siguientes objetivos:
 
 La implementación actual incluye los contratos inteligentes, sus pruebas con Foundry y un frontend en React para administrar permisos, registrar revisiones y consultar su integridad.
 
-Ambos contratos están desplegados en Sepolia y tienen el código fuente verificado en Etherscan. Los enlaces directos se encuentran en la sección [Verificación del código fuente](#4-verificación-del-código-fuente). La validación documentada del flujo completo con una wallet sigue pendiente.
+Ambos contratos están desplegados en Sepolia y tienen el código fuente verificado en Etherscan. Los enlaces directos se encuentran en la sección [Verificación del código fuente](#4-verificación-del-código-fuente). La autorización y el registro cuentan con [transacciones confirmadas](#6-transacciones-reales-del-flujo-principal); la validación documentada del flujo completo desde el frontend con una wallet sigue pendiente.
 
 ## Arquitectura
 
@@ -817,7 +817,7 @@ También deben documentarse los argumentos del constructor y las direcciones de 
 
 ### 5. Evidencia del despliegue
 
-Direcciones y enlaces de los contratos desplegados; queda pendiente incorporar los hashes de las transacciones de despliegue:
+Direcciones y transacciones de los contratos desplegados en Sepolia. Ambos recibos de despliegue confirman `status = 1` y las direcciones indicadas:
 
 | Dato | Valor |
 |---|---|
@@ -825,26 +825,34 @@ Direcciones y enlaces de los contratos desplegados; queda pendiente incorporar l
 | Chain ID | 11155111 |
 | Dirección de `RoadProofAuthorization` | `0xdf64905F42EC1D7C98bb1535e0B878A2DC334275` |
 | Dirección de `RoadProofRegistry` | `0xa04336222cBeE5C98E50e964A6C6b0F96AFdd4A5` |
-| Transacción de despliegue de autorización | Pendiente |
-| Transacción de despliegue del registro | Pendiente |
+| Transacción de despliegue de autorización | [0x9e2c65954bcbe0fbd059e4d0d12058a189ed06685109849b157258116224c286](https://sepolia.etherscan.io/tx/0x9e2c65954bcbe0fbd059e4d0d12058a189ed06685109849b157258116224c286), bloque `12009270` |
+| Transacción de despliegue del registro | [0xe4475e4bc2643aefeb74cc243946a8a931e31a9197f14927b6ed8e75a69675b8](https://sepolia.etherscan.io/tx/0xe4475e4bc2643aefeb74cc243946a8a931e31a9197f14927b6ed8e75a69675b8), bloque `12009271` |
 | Enlace al contrato verificado de autorización | [RoadProofAuthorization — código verificado](https://sepolia.etherscan.io/address/0xdf64905F42EC1D7C98bb1535e0B878A2DC334275#code) |
 | Enlace al contrato verificado del registro | [RoadProofRegistry — código verificado](https://sepolia.etherscan.io/address/0xa04336222cBeE5C98E50e964A6C6b0F96AFdd4A5#code) |
 | Cuenta administradora del despliegue | `0x34b769107733F15a809dc736DD187538721ef629` |
 
-### 6. Pruebas posteriores al despliegue
+### 6. Transacciones reales del flujo principal
 
-Con los contratos desplegados en Sepolia, repetir y documentar al menos las siguientes comprobaciones:
+El flujo de demostración utiliza datos sintéticos y dos cuentas: `cnrt`, administradora (`0x34b769107733F15a809dc736DD187538721ef629`), y `dt1`, director técnico (`0xBEe694a1E062C29070666D62BF9c6bCdF3342290`). Las siguientes transacciones fueron minadas en Sepolia y verificadas el 27 de octubre de 2026 (America/Denver) mediante sus recibos, remitentes, destinos, datos de llamada y eventos:
 
-- Consultar la autorización de un DT para un taller.
-- Autorizar un DT mediante la cuenta administradora.
-- Registrar una revisión con la cuenta autorizada.
-- Intentar registrar una revisión con una cuenta no autorizada.
-- Consultar la existencia de la revisión.
-- Verificar la integridad del hash del informe.
-- Consultar los eventos emitidos.
-- Registrar los hashes de las transacciones y sus enlaces públicos.
+| Operación | Firmante | Bloque | Resultado | Hash y enlace público |
+|---|---|---|---|---|
+| `authorizeTechnicalDirector`: autorizar a `dt1` para el taller de demostración | `cnrt` | `12009518` | `status = 1`; evento `TechnicalDirectorAuthorized` | [0x22dcd5454a510c9b4959b9d6427468af4b1a79c7f8ae13707352c9839a0b7fb0](https://sepolia.etherscan.io/tx/0x22dcd5454a510c9b4959b9d6427468af4b1a79c7f8ae13707352c9839a0b7fb0) |
+| `registerInspection`: registrar la revisión con resultado `PASS` | `dt1` | `12009570` | `status = 1`; evento `InspectionRegistered` | [0x1cbe139df589b42c7f9d6134f50e5dcad94d5fc2042799d9b19a406207198695](https://sepolia.etherscan.io/tx/0x1cbe139df589b42c7f9d6134f50e5dcad94d5fc2042799d9b19a406207198695) |
 
-El resultado de estas pruebas debe documentarse por separado de las pruebas locales.
+Los identificadores coinciden con los utilizados en las simulaciones de los scripts de demostración:
+
+| Dato | Valor |
+|---|---|
+| Taller | `ROADPROOF-DEMO-WORKSHOP-001` |
+| `workshopId` | `0x1c95af0326514d4850463074c43316b658d2a961aae1d816d4f0590f94468215` |
+| Revisión | `ROADPROOF-SEPOLIA-DT1-INSPECTION-001` |
+| `inspectionId` | `0x49d1da98ecbac97d69df79639fac066734247a7d510b63ed90ed591983e54e8b` |
+| `reportHash` | `0x87c383e0ccea9a9be80d77f9d667aafc1496f32866ba01047c4bd2ce2f2a6be6` |
+
+La consulta RPC posterior confirmó `isAuthorized(workshopId, dt1) = true`, `inspectionExists(inspectionId) = true` y `verifyIntegrity(inspectionId, reportHash) = true`. El registro almacenado también coincide con el taller, el director y el resultado `PASS`. Estas consultas son funciones `view`: no generan una transacción minada ni un hash propio.
+
+Esta evidencia acredita la autorización y el registro del ejemplo en la red pública de pruebas. La validación completa desde el frontend con una wallet, y la evidencia pública de casos adicionales como revocación y rechazo de cuentas no autorizadas, siguen pendientes.
 
 ## Integración con el frontend
 
@@ -1003,13 +1011,14 @@ Las pruebas actuales constituyen evidencia del comportamiento probado, pero no d
 - [x] Ambos contratos desplegados en Sepolia (Chain ID `11155111`).
 - [x] Código fuente de ambos contratos verificado, con [enlaces directos al código](#4-verificación-del-código-fuente) incluidos en este README.
 - [x] Direcciones de ambos contratos registradas en la [evidencia del despliegue](#5-evidencia-del-despliegue).
+- [x] Hashes y enlaces públicos de las dos transacciones de despliegue documentados.
+- [x] Autorización de `dt1`, registro de una revisión y consultas de existencia e integridad confirmados, con [evidencia del flujo principal](#6-transacciones-reales-del-flujo-principal).
 
 ### Pendiente de completar
 
 - [ ] Consolidar y registrar el informe definitivo de cobertura.
 - [ ] Completar la revisión de NatSpec y calidad del código.
 - [ ] Revisar el conjunto completo de pruebas de autorización, revocación, integridad y duplicados.
-- [ ] Registrar los hashes de las transacciones públicas de despliegue.
 - [ ] Configurar el frontend con las direcciones del despliegue público y comprobar su funcionamiento en esa red.
 - [ ] Probar el flujo de extremo a extremo desde el frontend.
 - [ ] Incorporar evidencia reproducible para la entrega académica.
